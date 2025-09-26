@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Pressable, TextInput, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import Animated, {
   useSharedValue,
@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { showComingSoonAlert, showSuccessAlert, showErrorAlert } from '../components/ui/alert';
 
 const { width, height } = Dimensions.get('window');
 
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
@@ -58,8 +60,41 @@ export default function LoginPage() {
   }));
 
   const handleLogin = () => {
-    // For now, just navigate to the main app
-    router.replace('/(tabs)');
+    // Show coming soon for email/password login
+    showComingSoonAlert('Email/Password Login');
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { GoogleAuthService } = await import('../services/googleAuth');
+      const user = await GoogleAuthService.signInWithGoogle();
+      if (user) {
+        showSuccessAlert(
+          'Welcome!',
+          `Hello ${user.name}! You have successfully signed in with Google.`
+        );
+        // Navigate to main app after successful login
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 2000);
+      }
+    } catch (error) {
+      showErrorAlert(
+        'Authentication Failed',
+        'Unable to sign in with Google. Please try again.'
+      );
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleForgotPassword = () => {
+    showComingSoonAlert('Forgot Password');
+  };
+
+  const handleSignUp = () => {
+    showComingSoonAlert('Sign Up');
   };
 
   const handleBackToOnboarding = () => {
@@ -119,7 +154,7 @@ export default function LoginPage() {
             </Pressable>
           </View>
 
-          <Pressable style={styles.forgotPassword}>
+          <Pressable style={styles.forgotPassword} onPress={handleForgotPassword}>
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </Pressable>
         </Animated.View>
@@ -140,14 +175,24 @@ export default function LoginPage() {
             <View style={styles.dividerLine} />
           </View>
 
-          <Pressable style={styles.socialButton}>
-            <Ionicons name="logo-google" size={20} color="#ffffff" />
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
+          <Pressable 
+            style={[styles.socialButton, isGoogleLoading && styles.socialButtonDisabled]} 
+            onPress={handleGoogleLogin}
+            disabled={isGoogleLoading}
+          >
+            {isGoogleLoading ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Ionicons name="logo-google" size={20} color="#ffffff" />
+            )}
+            <Text style={styles.socialButtonText}>
+              {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
+            </Text>
           </Pressable>
 
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <Pressable>
+            <Pressable onPress={handleSignUp}>
               <Text style={styles.signupLink}>Sign Up</Text>
             </Pressable>
           </View>
@@ -280,6 +325,9 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 15,
     marginBottom: 30,
+  },
+  socialButtonDisabled: {
+    opacity: 0.6,
   },
   socialButtonText: {
     color: '#ffffff',
