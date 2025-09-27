@@ -12,14 +12,19 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { showComingSoonAlert, showSuccessAlert, showErrorAlert } from '../components/ui/alert';
+import { AuthService } from '../googleServices/authService';
+// Note: Use dynamic import to avoid loading native module at startup in Expo Go
 
 const { width, height } = Dimensions.get('window');
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
   
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
@@ -59,15 +64,69 @@ export default function LoginPage() {
     opacity: buttonOpacity.value,
   }));
 
-  const handleLogin = () => {
-    // Show coming soon for email/password login
-    showComingSoonAlert('Email/Password Login');
+  const handleLogin = async () => {
+    if (isAuthLoading) return;
+    
+    // Basic validation
+    if (!email.trim() || !password.trim()) {
+      showErrorAlert('Validation Error', 'Please fill in all required fields');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showErrorAlert('Validation Error', 'Please enter a valid email address');
+      return;
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      showErrorAlert('Validation Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    setIsAuthLoading(true);
+    try {
+      if (isSignup) {
+        const response = await AuthService.signUp({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        showSuccessAlert(
+          'Account Created!',
+          `Welcome ${response.data.user.name}! Your account has been created successfully.`
+        );
+      } else {
+        const response = await AuthService.signIn({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+        showSuccessAlert(
+          'Welcome Back!',
+          `Hello ${response.data.user.name}! You have successfully signed in.`
+        );
+      }
+
+      // Navigate to main app after successful auth
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 2000);
+    } catch (error: any) {
+      showErrorAlert(
+        'Authentication Failed',
+        error.message || 'An error occurred during authentication. Please try again.'
+      );
+    } finally {
+      setIsAuthLoading(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      const { GoogleAuthService } = await import('../services/googleAuth');
+      const { GoogleAuthService } = await import('../googleServices/googleAuth');
       const user = await GoogleAuthService.signInWithGoogle();
       if (user) {
         showSuccessAlert(
@@ -93,8 +152,12 @@ export default function LoginPage() {
     showComingSoonAlert('Forgot Password');
   };
 
-  const handleSignUp = () => {
-    showComingSoonAlert('Sign Up');
+  const handleToggleMode = () => {
+    setIsSignup(!isSignup);
+    // Clear form when switching modes
+    setEmail('');
+    setPassword('');
+    setName('');
   };
 
   const handleBackToOnboarding = () => {
@@ -115,10 +178,26 @@ export default function LoginPage() {
 
         <Animated.View style={titleAnimatedStyle}>
           <Text style={styles.title}>Welcome to CoinBreakr</Text>
-          <Text style={styles.subtitle}>Sign in to start managing your expenses</Text>
+          <Text style={styles.subtitle}>
+            {isSignup ? 'Create an account to get started' : 'Sign in to start managing your expenses'}
+          </Text>
         </Animated.View>
 
         <Animated.View style={[styles.formContainer, formAnimatedStyle]}>
+          {isSignup && (
+            <View style={styles.inputContainer}>
+              <Ionicons name="person" size={20} color="#667eea" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                placeholderTextColor="rgba(102, 126, 234, 0.6)"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+              />
+            </View>
+          )}
+
           <View style={styles.inputContainer}>
             <Ionicons name="mail" size={20} color="#667eea" style={styles.inputIcon} />
             <TextInput
@@ -154,18 +233,30 @@ export default function LoginPage() {
             </Pressable>
           </View>
 
-          <Pressable style={styles.forgotPassword} onPress={handleForgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </Pressable>
+          {!isSignup && (
+            <Pressable style={styles.forgotPassword} onPress={handleForgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </Pressable>
+          )}
         </Animated.View>
 
         <Animated.View style={[styles.buttonContainer, buttonAnimatedStyle]}>
-          <Pressable style={styles.loginButton} onPress={handleLogin}>
+          <Pressable 
+            style={[styles.loginButton, isAuthLoading && styles.buttonDisabled]} 
+            onPress={handleLogin}
+            disabled={isAuthLoading}
+          >
             <LinearGradient
               colors={['#ffffff', '#f8f9ff']}
               style={styles.gradientButton}
             >
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              {isAuthLoading ? (
+                <ActivityIndicator size="small" color="#667eea" />
+              ) : (
+                <Text style={styles.loginButtonText}>
+                  {isSignup ? 'Create Account' : 'Sign In'}
+                </Text>
+              )}
             </LinearGradient>
           </Pressable>
 
@@ -191,9 +282,13 @@ export default function LoginPage() {
           </Pressable>
 
           <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <Pressable onPress={handleSignUp}>
-              <Text style={styles.signupLink}>Sign Up</Text>
+            <Text style={styles.signupText}>
+              {isSignup ? 'Already have an account? ' : "Don't have an account? "}
+            </Text>
+            <Pressable onPress={handleToggleMode}>
+              <Text style={styles.signupLink}>
+                {isSignup ? 'Sign In' : 'Sign Up'}
+              </Text>
             </Pressable>
           </View>
 
@@ -327,6 +422,9 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   socialButtonDisabled: {
+    opacity: 0.6,
+  },
+  buttonDisabled: {
     opacity: 0.6,
   },
   socialButtonText: {
