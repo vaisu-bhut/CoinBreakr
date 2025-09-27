@@ -1,0 +1,121 @@
+const mongoose = require('mongoose');
+
+// @desc    Health check endpoint
+// @route   GET /healthz
+// @access  Public
+const healthCheck = async (req, res) => {
+  try {
+    // Check database connection
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    
+    // Get basic system info
+    const healthData = {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      version: process.env.npm_package_version || '1.0.0',
+      database: {
+        status: dbStatus,
+        name: mongoose.connection.name || 'unknown'
+      },
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 100) / 100,
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024 * 100) / 100
+      }
+    };
+
+    // If database is not connected, return 503
+    if (dbStatus === 'disconnected') {
+      return res.status(503).json({
+        success: false,
+        message: 'Service unavailable - database disconnected',
+        data: healthData
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Service is healthy',
+      data: healthData
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    
+    res.status(503).json({
+      success: false,
+      message: 'Service unhealthy',
+      data: {
+        status: 'ERROR',
+        timestamp: new Date().toISOString(),
+        error: error.message
+      }
+    });
+  }
+};
+
+// @desc    Detailed health check for monitoring
+// @route   GET /healthz/detailed
+// @access  Private (requires authentication)
+const detailedHealthCheck = async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    
+    const detailedHealth = {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      version: process.env.npm_package_version || '1.0.0',
+      database: {
+        status: dbStatus,
+        name: mongoose.connection.name || 'unknown',
+        host: mongoose.connection.host || 'unknown',
+        readyState: mongoose.connection.readyState
+      },
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 100) / 100,
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024 * 100) / 100,
+        external: Math.round(process.memoryUsage().external / 1024 / 1024 * 100) / 100,
+        rss: Math.round(process.memoryUsage().rss / 1024 / 1024 * 100) / 100
+      },
+      process: {
+        pid: process.pid,
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch
+      }
+    };
+
+    if (dbStatus === 'disconnected') {
+      return res.status(503).json({
+        success: false,
+        message: 'Service unavailable - database disconnected',
+        data: detailedHealth
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Detailed health check successful',
+      data: detailedHealth
+    });
+  } catch (error) {
+    console.error('Detailed health check error:', error);
+    
+    res.status(503).json({
+      success: false,
+      message: 'Service unhealthy',
+      data: {
+        status: 'ERROR',
+        timestamp: new Date().toISOString(),
+        error: error.message
+      }
+    });
+  }
+};
+
+module.exports = {
+  healthCheck,
+  detailedHealthCheck
+};
