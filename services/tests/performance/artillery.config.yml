@@ -1,0 +1,137 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    # Ramp up phase
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp up load"
+    # Sustained load phase
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+    # Peak load phase
+    - duration: 60
+      arrivalRate: 100
+      name: "Peak load"
+    # Cool down phase
+    - duration: 60
+      arrivalRate: 10
+      name: "Cool down"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+  plugins:
+    metrics-by-endpoint: {}
+  ensure:
+    p95: 2000
+    p99: 5000
+    maxErrorRate: 5
+
+scenarios:
+  - name: "Authentication Flow"
+    weight: 30
+    flow:
+      - post:
+          url: "/v1/auth/register"
+          json:
+            name: "LoadTestUser{{ $randomInt(1, 10000) }}"
+            email: "loadtest{{ $randomInt(1, 10000) }}@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "authToken"
+      - post:
+          url: "/v1/auth/login"
+          json:
+            email: "loadtest{{ $randomInt(1, 10000) }}@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "authToken"
+
+  - name: "User Management Flow"
+    weight: 25
+    flow:
+      - post:
+          url: "/v1/auth/login"
+          json:
+            email: "user{{ $randomInt(1, 50) }}@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "authToken"
+      - get:
+          url: "/v1/users/profile"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/v1/users/search?q=User{{ $randomInt(1, 10) }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/v1/users/friends"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - get:
+          url: "/v1/users/balances"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Expense Management Flow"
+    weight: 35
+    flow:
+      - post:
+          url: "/v1/auth/login"
+          json:
+            email: "user{{ $randomInt(1, 50) }}@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "authToken"
+      - get:
+          url: "/v1/expenses"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+      - post:
+          url: "/v1/expenses"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            description: "Load Test Expense {{ $randomInt(1, 10000) }}"
+            amount: "{{ $randomInt(10, 1000) }}"
+            currency: "USD"
+            category: "food"
+            splitWith:
+              - user: "{{ $randomInt(1, 50) }}"
+                amount: "{{ $randomInt(5, 500) }}"
+      - get:
+          url: "/v1/expenses?page={{ $randomInt(1, 5) }}&limit=10"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "Friend Management Flow"
+    weight: 10
+    flow:
+      - post:
+          url: "/v1/auth/login"
+          json:
+            email: "user{{ $randomInt(1, 50) }}@example.com"
+            password: "password123"
+          capture:
+            - json: "$.data.token"
+              as: "authToken"
+      - post:
+          url: "/v1/users/friends"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            friendId: "{{ $randomInt(1, 50) }}"
+      - get:
+          url: "/v1/users/friends/{{ $randomInt(1, 50) }}/balance"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
