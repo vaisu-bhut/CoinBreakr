@@ -13,16 +13,39 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Please provide an email'],
     unique: true,
     lowercase: true,
+    trim: true,
     match: [
-      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+      /^[a-zA-Z0-9](?:[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]*[a-zA-Z0-9])?@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/,
       'Please provide a valid email'
-    ]
+    ],
+    validate: {
+      validator: function(email) {
+        // Additional validation to catch edge cases
+        if (email.includes('..') || email.includes(' ') || email.includes('@@') || 
+            email.startsWith('.') || email.endsWith('.') || 
+            email.includes('@.') || email.includes('.@') ||
+            email.split('@').length !== 2 || 
+            email.split('@')[1].split('.').length < 2) {
+          return false;
+        }
+        return true;
+      },
+      message: 'Please provide a valid email'
+    }
   },
   password: {
     type: String,
     required: [true, 'Please provide a password'],
     minlength: [6, 'Password must be at least 6 characters'],
     select: false // Don't include password in queries by default
+  },
+  profileImage: {
+    type: String,
+    default: 'https://via.placeholder.com/150'
+  },    
+  phoneNumber: {
+    type: String,
+    default: ''
   },
   role: {
     type: String,
@@ -43,7 +66,11 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  friends: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 });
 
 // Hash password before saving

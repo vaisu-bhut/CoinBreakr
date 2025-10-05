@@ -4,20 +4,20 @@ const User = require('../models/User');
 // Middleware to verify JWT token
 const authenticateToken = async (req, res, next) => {
   try {
-    // Get token from header
     const authHeader = req.headers['authorization'];
-    const token = authHeader;
+    const token = authHeader && authHeader.startsWith('Bearer ') 
+      ? authHeader.slice(7) 
+      : null;
+    
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Access token required'
+        message: 'No token provided'
       });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Get user from token
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
@@ -34,7 +34,7 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Add user to request object
+    req.userId = user._id;
     req.user = user;
     next();
   } catch (error) {
