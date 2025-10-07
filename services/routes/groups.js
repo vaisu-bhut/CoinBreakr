@@ -14,7 +14,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Validation rules
+// Validation rules for creating a group
 const createGroupValidation = [
   body('name')
     .trim()
@@ -29,6 +29,7 @@ const createGroupValidation = [
     .withMessage('Description cannot be more than 500 characters')
 ];
 
+// Validation rules for updating a group
 const updateGroupValidation = [
   body('name')
     .optional()
@@ -44,6 +45,7 @@ const updateGroupValidation = [
     .withMessage('Description cannot be more than 500 characters')
 ];
 
+// Validation rules for adding a member to a group
 const addMemberValidation = [
   body('memberEmail')
     .isEmail()
@@ -74,9 +76,9 @@ router.delete('/:id', authenticateToken, deleteGroup);
 router.post('/:id/members', authenticateToken, addMemberValidation, addMember);
 
 // Remove a member from the group
-router.patch('/:id/members/:memberId', authenticateToken, removeMember);
+router.delete('/:id/members/:memberId', authenticateToken, removeMember);
 
 // Leave the group (user removes themselves)
-router.post('/:id/leave', authenticateToken, leaveGroup);
+router.delete('/:id/leave', authenticateToken, leaveGroup);
 
 module.exports = router;

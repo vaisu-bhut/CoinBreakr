@@ -15,15 +15,15 @@ const createGroup = async (req, res) => {
       });
     }
 
-    const { name, description, members = [] } = req.body;
-    const userId = req.user._id;
+    const { name, description, members } = req.body;
+    const userId = req.userId;
 
     // Create group with creator as admin
     const group = new Group({
       name,
       description: description || '',
       createdBy: userId,
-      members: [{
+      members: members || [{
         user: userId,
         role: 'admin',
         joinedAt: new Date()
@@ -83,7 +83,7 @@ const createGroup = async (req, res) => {
 // Get all groups for a user
 const getGroups = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.userId;
     const groups = await Group.getGroupsForUser(userId);
 
     res.status(200).json({
@@ -105,7 +105,7 @@ const getGroups = async (req, res) => {
 const getGroup = async (req, res) => {
   try {
     const groupId = req.params.id;
-    const userId = req.user._id;
+    const userId = req.userId;
 
     const group = await Group.getGroupWithMembers(groupId);
     
@@ -153,7 +153,7 @@ const updateGroup = async (req, res) => {
     }
 
     const groupId = req.params.id;
-    const userId = req.user._id;
+    const userId = req.userId;
     const { name, description } = req.body;
 
     const group = await Group.findById(groupId);
@@ -204,7 +204,7 @@ const updateGroup = async (req, res) => {
 const deleteGroup = async (req, res) => {
   try {
     const groupId = req.params.id;
-    const userId = req.user._id;
+    const userId = req.userId;
 
     const group = await Group.findById(groupId);
     
@@ -255,7 +255,7 @@ const addMember = async (req, res) => {
     }
 
     const groupId = req.params.id;
-    const userId = req.user._id;
+    const userId = req.userId;
     const { memberEmail, role = 'member' } = req.body;
 
     const group = await Group.findById(groupId);
@@ -322,7 +322,7 @@ const removeMember = async (req, res) => {
   try {
     const groupId = req.params.id;
     const memberId = req.params.memberId;
-    const userId = req.user._id;
+    const userId = req.userId;
 
     const group = await Group.findById(groupId);
     
@@ -386,7 +386,7 @@ const removeMember = async (req, res) => {
 const leaveGroup = async (req, res) => {
   try {
     const groupId = req.params.id;
-    const userId = req.user._id;
+    const userId = req.userId;
 
     const group = await Group.findById(groupId);
     
