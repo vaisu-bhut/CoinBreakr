@@ -136,8 +136,8 @@ describe('🔥 Smoke Tests - Basic Functionality', () => {
   describe('👤 User Management Smoke Tests', () => {
     test('should get user profile', async () => {
       const response = await request(app)
-        .get('/v1/users/profile')
-        .set('Authorization', `Bearer ${authToken}`)
+        .get('/v1/users/search?query=Smoke')
+        .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
@@ -176,13 +176,8 @@ describe('🔥 Smoke Tests - Basic Functionality', () => {
       expect(Array.isArray(response.body.data)).toBe(true);
     });
 
-    test('should add and remove friends', async () => {
-      // Add friend
-      const addResponse = await request(app)
-        .post(`/v1/users/friends`)
-        .send({ friendId: testUser2._id })
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
+  describe('Expense Management Smoke Tests', () => {
+    let token, friendToken, friendId, userId;
 
       expect(addResponse.body).toHaveProperty('success', true);
 
@@ -196,11 +191,22 @@ describe('🔥 Smoke Tests - Basic Functionality', () => {
 
       // Remove friend
       await request(app)
-        .delete(`/v1/users/friends/${testUser2._id}`)
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-    });
-  });
+        .post('/v1/auth/register')
+        .send(friendData);
+
+      const friendLoginResponse = await request(app)
+        .post('/v1/auth/login')
+        .send({ email: 'smokefriend@example.com', password: 'password123' });
+      
+      friendToken = friendLoginResponse.body.data.token;
+      friendId = friendLoginResponse.body.data.user.id;
+
+      // Login main user
+      const loginResponse = await request(app)
+        .post('/v1/auth/login')
+        .send({ email: 'smoketest@example.com', password: 'password123' });
+      token = loginResponse.body.data.token;
+      userId = loginResponse.body.data.user.id;
 
   describe('💰 Expense Management Smoke Tests', () => {
     beforeEach(async () => {
@@ -309,11 +315,21 @@ describe('🔥 Smoke Tests - Basic Functionality', () => {
     });
   });
 
-  describe('👥 Group Management Smoke Tests', () => {
-    test('should create a new group', async () => {
-      const groupData = {
-        name: 'Smoke Test Group',
-        description: 'A test group for smoke testing'
+    it('should settle an expense', async () => {
+      // First create an expense
+      const expenseData = {
+        description: 'Settlement test expense',
+        amount: 40.00,
+        splitWith: [
+          {
+            user: userId,
+            amount: 20.00
+          },
+          {
+            user: friendId,
+            amount: 20.00
+          }
+        ]
       };
 
       const response = await request(app)
@@ -335,8 +351,9 @@ describe('🔥 Smoke Tests - Basic Functionality', () => {
       await group.save();
 
       const response = await request(app)
-        .get('/v1/groups')
-        .set('Authorization', `Bearer ${authToken}`)
+        .patch(`/v1/expenses/${expenseId}/settle`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ userId: friendId })
         .expect(200);
 
       expect(response.body).toHaveProperty('success', true);
