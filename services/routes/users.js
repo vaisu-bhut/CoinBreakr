@@ -9,7 +9,9 @@ const {
   removeFriend,
   getFriends,
   getBalanceWithFriend,
-  getAllBalances
+  getAllBalances,
+  updateUserProfile,
+  changePassword
 } = require('../controllers/userController');
 
 // Get user profile

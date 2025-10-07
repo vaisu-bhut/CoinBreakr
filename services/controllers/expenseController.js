@@ -68,7 +68,7 @@ const createExpense = async (req, res) => {
     if (groupId) {
       group = await Group.findById(groupId);
       if (!group) {
-        return res.status(404).json({
+        return res.status(400).json({
           success: false,
           message: 'Group not found'
         });
@@ -76,7 +76,7 @@ const createExpense = async (req, res) => {
 
       // Check if creator is a member of the group
       if (!group.isMember(req.userId)) {
-        return res.status(403).json({
+        return res.status(400).json({
           success: false,
           message: 'You are not a member of this group'
         });
@@ -241,6 +241,7 @@ const getUserExpenses = async (req, res) => {
       data: expenses,
       pagination: {
         current: parseInt(page),
+        limit: parseInt(limit),
         pages: Math.ceil(total / limit),
         total
       }

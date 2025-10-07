@@ -30,6 +30,33 @@ const createGroup = async (req, res) => {
       }]
     });
 
+    // Add additional members if provided
+    if (members && members.length > 0) {
+      // Validate that all member IDs exist and are friends of the creator
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      for (const memberId of members) {
+        // Check if the member ID is valid and is a friend of the creator
+        if (user.friends.includes(memberId)) {
+          // Check if member exists
+          const memberUser = await User.findById(memberId);
+          if (memberUser) {
+            group.members.push({
+              user: memberId,
+              role: 'member',
+              joinedAt: new Date()
+            });
+          }
+        }
+      }
+    }
+
     await group.save();
 
     // Populate the group data
