@@ -13,7 +13,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { showComingSoonAlert, showSuccessAlert, showErrorAlert } from '../components/ui/alert';
 import { AuthService } from '../googleServices/authService';
-// Note: Use dynamic import to avoid loading native module at startup in Expo Go
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,7 +21,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
   
@@ -123,30 +121,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true);
-    try {
-      const { GoogleAuthService } = await import('../googleServices/googleAuth');
-      const user = await GoogleAuthService.signInWithGoogle();
-      if (user) {
-        showSuccessAlert(
-          'Welcome!',
-          `Hello ${user.name}! You have successfully signed in with Google.`
-        );
-        // Navigate to main app after successful login
-        setTimeout(() => {
-          router.replace('/(tabs)');
-        }, 2000);
-      }
-    } catch (error) {
-      showErrorAlert(
-        'Authentication Failed',
-        'Unable to sign in with Google. Please try again.'
-      );
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
 
   const handleForgotPassword = () => {
     showComingSoonAlert('Forgot Password');
@@ -260,26 +234,6 @@ export default function LoginPage() {
             </LinearGradient>
           </Pressable>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <Pressable 
-            style={[styles.socialButton, isGoogleLoading && styles.socialButtonDisabled]} 
-            onPress={handleGoogleLogin}
-            disabled={isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Ionicons name="logo-google" size={20} color="#ffffff" />
-            )}
-            <Text style={styles.socialButtonText}>
-              {isGoogleLoading ? 'Signing in...' : 'Continue with Google'}
-            </Text>
-          </Pressable>
 
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>
@@ -396,42 +350,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#667eea',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  dividerText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    paddingHorizontal: 15,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    paddingVertical: 15,
-    borderRadius: 15,
-    marginBottom: 30,
-  },
-  socialButtonDisabled: {
-    opacity: 0.6,
-  },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  socialButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 10,
   },
   signupContainer: {
     flexDirection: 'row',
