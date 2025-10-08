@@ -44,3 +44,7 @@ app-example
 /ios
 /android
 .vscode
+
+# Terraform
+.terraform
+.terraform.lock.hcl
