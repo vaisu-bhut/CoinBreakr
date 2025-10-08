@@ -27,74 +27,74 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-const updateUserProfile = async (req, res) => {
-    try {
-        const { name, email, profileImage, phoneNumber, role, _id } = req.body;
+// const updateUserProfile = async (req, res) => {
+//     try {
+//         const { name, email, profileImage, phoneNumber, role, _id } = req.body;
 
-        if (email) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email cannot be updated'
-            });
-        }
+//         if (email) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Email cannot be updated'
+//             });
+//         }
 
-        if (role) {
-            return res.status(400).json({
-                success: false,
-                message: 'Role cannot be updated'
-            });
-        }
+//         if (role) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Role cannot be updated'
+//             });
+//         }
 
-        if (_id) {
-            return res.status(400).json({
-                success: false,
-                message: 'ID cannot be updated'
-            });
-        }
+//         if (_id) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'ID cannot be updated'
+//             });
+//         }
 
-        if (name !== undefined && (name.trim().length > 30 || name.trim().length < 2)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Name cannot be more than 30 characters or less than 2 characters'
-            });
-        }
+//         if (name !== undefined && (name.trim().length > 30 || name.trim().length < 2)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: 'Name cannot be more than 30 characters or less than 2 characters'
+//             });
+//         }
 
-        if (phoneNumber !== undefined) {
-            if (phoneNumber.length > 15 || phoneNumber.length < 10) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Phone number cannot be more than 15 characters or less than 10 characters'
-                });
-            }
+//         if (phoneNumber !== undefined) {
+//             if (phoneNumber.length > 15 || phoneNumber.length < 10) {
+//                 return res.status(400).json({
+//                     success: false,
+//                     message: 'Phone number cannot be more than 15 characters or less than 10 characters'
+//                 });
+//             }
             
-            if (!phoneNumber.startsWith('+')) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Phone number must start with +'
-                });
-            }
-        }        
+//             if (!phoneNumber.startsWith('+')) {
+//                 return res.status(400).json({
+//                     success: false,
+//                     message: 'Phone number must start with +'
+//                 });
+//             }
+//         }        
 
-        // Build update object with only provided fields
-        const updateFields = { updatedAt: new Date() };
-        if (name) updateFields.name = name;
-        if (profileImage) updateFields.profileImage = profileImage;
-        if (phoneNumber) updateFields.phoneNumber = phoneNumber;
+//         // Build update object with only provided fields
+//         const updateFields = { updatedAt: new Date() };
+//         if (name) updateFields.name = name;
+//         if (profileImage) updateFields.profileImage = profileImage;
+//         if (phoneNumber) updateFields.phoneNumber = phoneNumber;
 
-        const user = await User.findByIdAndUpdate(req.userId, updateFields, { new: true, runValidators: true });
-        res.status(200).json({
-            success: true,
-            data: user
-        });
-    } catch (error) {
-        console.error('Update user profile error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error',
-            error: error.message
-        });
-    }
-};
+//         const user = await User.findByIdAndUpdate(req.userId, updateFields, { new: true, runValidators: true });
+//         res.status(200).json({
+//             success: true,
+//             data: user
+//         });
+//     } catch (error) {
+//         console.error('Update user profile error:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Server error',
+//             error: error.message
+//         });
+//     }
+// };
 
 const changePassword = async (req, res) => {
     try {
@@ -187,7 +187,7 @@ const updateUserProfile = async (req, res) => {
 
 const searchUsers = async (req, res) => {
     try {
-        const userId = req.query.userId;
+        const { userId, page, limit } = req.query;
         if (!userId || userId.trim().length < 2) {
             return res.status(400).json({
                 success: false,
@@ -443,7 +443,6 @@ const getAllBalances = async (req, res) => {
 
 module.exports = {
     getUserProfile,
-    updateUserProfile,
     searchUsers,
     addFriend,
     removeFriend,

@@ -10,7 +10,6 @@ const {
   getFriends,
   getBalanceWithFriend,
   getAllBalances,
-  updateUserProfile,
   changePassword
 } = require('../controllers/userController');
 
@@ -37,5 +36,8 @@ router.get('/friends/:friendId/balance', authenticateToken, getBalanceWithFriend
 
 // Get all balances
 router.get('/balances', authenticateToken, getAllBalances);
+
+// Change password
+router.patch('/change-password', authenticateToken, changePassword);
 
 module.exports = router;
