@@ -12,6 +12,7 @@ permissions:
 jobs:
   build-image:
     name: Build GCP Image via Packer
+    if: github.repository == 'Clestique/CoinBreakr'   
     runs-on: ubuntu-latest
 
     steps:
