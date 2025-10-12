@@ -68,11 +68,32 @@ jobs:
         working-directory: ./services
         run: npx audit-ci --config audit-ci.json || true
 
+  # Packer Validation
+  packer-validate:
+    name: Packer Validate
+    needs: [lint, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@v1
+        with:
+          version: "1.14.0" 
+
+      - name: packer fmt (check)
+        run: |
+          packer fmt -check -recursive .
+
+      - name: packer validate
+        run: |
+          packer validate packer.pkr.hcl
+
   # Terraform Format & Validation
   terraform:
     name: Terraform Format & Validate
     runs-on: ubuntu-latest
-    needs: [lint, security] 
+    needs: [lint, security, packer-validate] 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
