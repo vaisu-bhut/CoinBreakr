@@ -45,6 +45,7 @@ jobs:
       - name: 📦 Create services.zip
         run: |
           echo "📦 Creating services.zip from services directory..."
+          mkdir -p dist
           cd services
           zip -r ../dist/services.zip . -x "node_modules/*" "*.md"
           cd ..
