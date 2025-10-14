@@ -2,7 +2,7 @@ name: CoinBreakr CI/CD Pipeline
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ main, staging ]
 
 env:
   NODE_VERSION: '22'
@@ -75,6 +75,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create dummy services.zip for validation
+        run: |
+          echo "📦 Creating dummy dist/services.zip for Packer validation..."
+          mkdir -p dist
+          touch dist/.dummy
+          (cd dist && zip -rq services.zip .dummy)
+          rm -f dist/.dummy
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@v3.1.0
