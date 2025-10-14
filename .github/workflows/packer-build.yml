@@ -41,13 +41,18 @@ jobs:
           sudo unzip -o packer.zip -d /usr/local/bin/
           packer --version
 
-      - name: 📦 Check services.zip
+      - name: 📦 Create services.zip
         run: |
-          if [ ! -f packer/services.zip ]; then
-            echo "❌ Error: packer/services.zip not found!"
-            exit 1
+          echo "📦 Creating services.zip from services directory..."
+          cd services
+          zip -r ../dist/services.zip . -x "node_modules/*" "*.md"
+          cd ..
+          if [ -f dist/services.zip ]; then
+            echo "✅ services.zip created successfully"
+            ls -la dist/services.zip
           else
-            echo "✅ services.zip exists, ready for Packer."
+            echo "❌ Error: Failed to create services.zip"
+            exit 1
           fi
 
       - name: 🧠 Initialize Packer
