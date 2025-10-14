@@ -38,7 +38,7 @@ jobs:
         id: get-image
         run: |
           echo "🔍 Finding latest image from coinbreakr-image-family..."
-          LATEST_IMAGE=$(gcloud compute images list --filter="family:coinbreakr-image-family" --format="value(name)" --sort-by="~creationTimestamp" --limit=1)
+          LATEST_IMAGE=$(gcloud compute images list --filter="family:coinbreakr-staging-family" --format="value(name)" --sort-by="~creationTimestamp" --limit=1)
           if [ -z "$LATEST_IMAGE" ]; then
             echo "❌ No images found in coinbreakr-image-family"
             exit 1
@@ -76,7 +76,7 @@ jobs:
             -var="region=us-central1" \
             -var="zone=us-central1-a" \
             -var="instance_name=coinbreakr-staging-$(date +%Y%m%d-%H%M%S)" \
-            -var="image_family=coinbreakr-image-family" \
+            -var="image_family=coinbreakr-staging-family" \
             -var="machine_type=e2-small" \
             -var="ssh_user=terraform" \
             -var="ssh_public_key_path=/dev/null" \
@@ -91,7 +91,7 @@ jobs:
             -var="region=us-central1" \
             -var="zone=us-central1-a" \
             -var="instance_name=coinbreakr-staging-$(date +%Y%m%d-%H%M%S)" \
-            -var="image_family=coinbreakr-image-family" \
+            -var="image_family=coinbreakr-staging-family" \
             -var="machine_type=e2-small" \
             -var="ssh_user=terraform" \
             -var="ssh_public_key_path=/dev/null"
