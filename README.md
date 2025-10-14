@@ -1,1 +1,1 @@
-##CoinBreakr
+##CoinBreakr Server

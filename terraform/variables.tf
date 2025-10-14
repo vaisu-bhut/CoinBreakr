@@ -36,5 +36,4 @@ variable "ssh_user" {
 variable "ssh_public_key_path" {
   description = "Path to SSH public key file (optional for automated deployment)"
   type        = string
-  default     = "/dev/null"
 }
