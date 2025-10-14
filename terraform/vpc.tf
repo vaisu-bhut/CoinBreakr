@@ -57,9 +57,21 @@ resource "google_compute_instance" "vm_instance" {
     access_config {} # External IP
   }
 
-  metadata = {
-    ssh-keys = "${var.ssh_user}:${file(var.ssh_public_key_path)}"
-  }
+  tags = ["cheap-instance"]
+}
 
-  tags = ["cheap-instance"] # Must match firewall target_tags
+# Outputs
+output "instance_name" {
+  description = "Name of the created instance"
+  value       = google_compute_instance.vm_instance.name
+}
+
+output "instance_external_ip" {
+  description = "External IP address of the instance"
+  value       = google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip
+}
+
+output "application_url" {
+  description = "URL to access the application"
+  value       = "http://${google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip}:3000/v1/healthz"
 }

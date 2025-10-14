@@ -99,7 +99,7 @@ build {
   sources = ["source.googlecompute.ubuntu"]
 
   provisioner "file" {
-    source      = "./services.zip"
+    source      = "../dist/services.zip"
     destination = "/tmp/services.zip"
   }
 
