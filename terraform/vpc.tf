@@ -3,14 +3,6 @@ data "google_compute_network" "vpc_network" {
   name = "coinbreakr-network"
 }
 
-data "google_compute_firewall" "allow_ssh" {
-  name = "allow-ssh"
-}
-
-data "google_compute_firewall" "allow_node_app" {
-  name = "allow-node-app"
-}
-
 # Get the latest Coinbreakr image
 data "google_compute_image" "latest_coinbreakr_staging" {
   family  = var.image_family
