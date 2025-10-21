@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.light,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.text.primary,
   },

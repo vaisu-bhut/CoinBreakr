@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image, StatusBar, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import SectionCard from '../../components/SectionCard';
 import colors from '../../theme/colors';
 import { friendsService, Friend, PendingFriend } from '../../services/friends';
+
+// Constants for consistent sizing across all screens
+const TAB_BAR_HEIGHT = 65; // From TabNavigator configuration
+const FAB_BOTTOM_MARGIN = 20; // Space above tab bar
 
 const FriendsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -13,39 +16,16 @@ const FriendsScreen: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingFriends, setPendingFriends] = useState<PendingFriend[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasContactPermission, setHasContactPermission] = useState(false);
-  const [isFirstTime, setIsFirstTime] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddFriend, setShowAddFriend] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [showFabOptions, setShowFabOptions] = useState(false);
+  const [fabAnimation] = useState(new Animated.Value(0));
 
   useEffect(() => {
     checkInitialState();
   }, []);
 
-  // Add focus listener to refresh friends when returning to screen
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadFriends();
-    });
-
-    return unsubscribe;
-  }, [navigation]);
-
   const checkInitialState = async () => {
     try {
-      // Check if user has contact permission
-      const hasPermission = await friendsService.checkContactPermission();
-      setHasContactPermission(hasPermission);
-
-      // Load friends
       await loadFriends();
-
-      // If first time and no permission, request it
-      if (!hasPermission && isFirstTime) {
-        requestContactPermission();
-      }
     } catch (error) {
       console.error('Error checking initial state:', error);
     } finally {
@@ -56,14 +36,8 @@ const FriendsScreen: React.FC = () => {
   const loadFriends = async () => {
     try {
       const response = await friendsService.getFriends();
-
-      if (response.success && response.data) {
-        setFriends(response.data.friends || []);
-        setPendingFriends(response.data.pendingFriends || []);
-      } else {
-        setFriends([]);
-        setPendingFriends([]);
-      }
+      setFriends(response.friends || []);
+      setPendingFriends(response.pendingFriends || []);
     } catch (error) {
       console.error('Error loading friends:', error);
       Alert.alert('Error', 'Unable to load friends. Please check your connection and try again.');
@@ -72,27 +46,42 @@ const FriendsScreen: React.FC = () => {
     }
   };
 
-  const requestContactPermission = async () => {
-    try {
-      const granted = await friendsService.requestContactPermission();
-      setHasContactPermission(granted);
+  const navigateToAddFriend = () => {
+    setShowFabOptions(false);
+    navigation.navigate('AddFriend');
+  };
 
-      if (!granted) {
-        Alert.alert(
-          'Contact Access',
-          'Contact access helps you find friends who are already using CoinBreakr.',
-          [{ text: 'OK' }]
-        );
-      }
-      setIsFirstTime(false);
-    } catch (error) {
-      console.error('Error requesting contact permission:', error);
+  const handleAddExpense = () => {
+    setShowFabOptions(false);
+    // TODO: Implement add expense functionality
+    Alert.alert('Add Expense', 'Add expense functionality will be implemented here');
+  };
+
+  const toggleFabOptions = () => {
+    const toValue = showFabOptions ? 0 : 1;
+    setShowFabOptions(!showFabOptions);
+
+    Animated.spring(fabAnimation, {
+      toValue,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 8,
+    }).start();
+  };
+
+  const closeFabOptions = () => {
+    if (showFabOptions) {
+      setShowFabOptions(false);
+      Animated.spring(fabAnimation, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 8,
+      }).start();
     }
   };
 
-  const navigateToAddFriend = () => {
-    navigation.navigate('AddFriend');
-  };
+  // No filtering needed since we removed search functionality
 
   if (loading) {
     return (
@@ -104,64 +93,40 @@ const FriendsScreen: React.FC = () => {
     );
   }
 
+  const totalFriends = friends.length + pendingFriends.length;
+  const hasAnyFriends = totalFriends > 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor={colors.background.body} barStyle="dark-content" />
-      <View style={[styles.header, { paddingTop: insets.top - 14 }]}>
+
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top - 15 }]}>
         <Text style={styles.headerTitle}>Friends</Text>
         <TouchableOpacity
-          style={styles.notificationButton}
-          onPress={() => setShowNotifications(true)}
+          style={styles.headerButton}
+          onPress={navigateToAddFriend}
         >
-          <Ionicons
-            name={unreadCount > 0 ? "notifications" : "notifications-outline"}
-            size={24}
-            color={colors.text.secondary}
-          />
-          {unreadCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
-            </View>
-          )}
+          <Ionicons name="person-add-outline" size={24} color={colors.text.secondary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Contact Permission Button */}
-        {!hasContactPermission && showAddFriend && (
-          <TouchableOpacity
-            style={styles.permissionButton}
-            onPress={requestContactPermission}
-          >
-            <Text style={styles.permissionButtonText}>Allow Contact Access</Text>
-            <Text style={styles.permissionSubtext}>Find friends who are already using CoinBreakr</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Friends List */}
-        <SectionCard title={`My Friends${friends.length + pendingFriends.length > 0 ? ` (${friends.length + pendingFriends.length})` : ''}`}>
-          {/* Search Bar inside Friends section */}
-          <View style={styles.searchContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search friends..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onFocus={() => setShowAddFriend(true)}
-            />
-          </View>
-
-          {friends.length > 0 || pendingFriends.length > 0 ? (
-            <View style={styles.friendsList}>
+      {/* Content */}
+      <View style={styles.content}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          onScrollBeginDrag={closeFabOptions}
+        >
+          {hasAnyFriends ? (
+            <>
+              {/* Friends List */}
               {friends.map((friend, index) => (
                 <TouchableOpacity
-                  key={`friend-${friend.id || friend._id || index}`}
+                  key={`friend-${friend._id || index}`}
                   style={styles.friendItem}
                   onPress={() => {
-                    // Friend details functionality removed
+                    closeFabOptions();
                     console.log('Friend selected:', friend.name);
                   }}
                 >
@@ -172,20 +137,17 @@ const FriendsScreen: React.FC = () => {
                   <View style={styles.friendInfo}>
                     <Text style={styles.friendName}>{friend.name}</Text>
                     <Text style={styles.friendEmail}>{friend.email}</Text>
-                    <View style={styles.badgeContainer}>
-                      {friend.hasTransactions && (
-                        <Text style={styles.transactionBadge}>Has transactions</Text>
-                      )}
-                      {!friend.isContactSynced && (
-                        <Text style={styles.nonAppUserBadge}>Not on CoinBreakr</Text>
-                      )}
-                    </View>
+                    {friend.hasTransactions && (
+                      <Text style={styles.transactionBadge}>Has transactions</Text>
+                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
                 </TouchableOpacity>
               ))}
+
+              {/* Pending Friends */}
               {pendingFriends.map((pendingFriend, index) => (
-                <View key={`pending-${pendingFriend.id || `idx-${index}`}`} style={styles.friendItem}>
+                <View key={`pending-${pendingFriend._id || `idx-${index}`}`} style={styles.friendItem}>
                   <Image
                     source={{ uri: pendingFriend.profileImage || 'https://placehold.co/40x40' }}
                     style={styles.friendAvatar}
@@ -193,69 +155,104 @@ const FriendsScreen: React.FC = () => {
                   <View style={styles.friendInfo}>
                     <Text style={styles.friendName}>{pendingFriend.name}</Text>
                     <Text style={styles.friendEmail}>{pendingFriend.email || 'No email'}</Text>
-                    <View style={styles.badgeContainer}>
-                      <Text style={styles.pendingBadge}>Pending invitation</Text>
-                    </View>
+                    <Text style={styles.pendingBadge}>Pending invitation</Text>
                   </View>
                 </View>
               ))}
-            </View>
+
+              {/* Add New Friend Button */}
+              <View style={styles.addNewFriendContainer}>
+                <TouchableOpacity
+                  style={styles.addNewFriendButton}
+                  onPress={navigateToAddFriend}
+                >
+                  <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.addNewFriendText}>Add new friend</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           ) : (
+            /* Empty State */
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>👤</Text>
+              <Text style={styles.emptyIcon}>👥</Text>
               <Text style={styles.emptyTitle}>No friends yet</Text>
               <Text style={styles.emptyText}>
                 Add friends to start splitting expenses and sharing costs
               </Text>
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => setShowAddFriend(true)}
-              >
-                <Text style={styles.addButtonText}>Add Friends</Text>
-              </TouchableOpacity>
+              <View style={styles.arrowContainer}>
+                <Text style={styles.arrowText}>Tap the + button to get started</Text>
+                <Text style={styles.arrow}>↘️</Text>
+              </View>
             </View>
           )}
-        </SectionCard>
+        </ScrollView>
+      </View>
 
-        {/* Only show How to Connect if no friends and no pending friends */}
-        {friends.length === 0 && pendingFriends.length === 0 && (
-          <SectionCard title="How to Connect">
-            <View style={styles.featureList}>
-              <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>🔍</Text>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Search & Add</Text>
-                  <Text style={styles.featureText}>Find friends by email or phone number</Text>
-                </View>
-              </View>
+      {/* Invisible overlay to close FAB when tapping outside */}
+      {showFabOptions && (
+        <TouchableOpacity
+          style={styles.invisibleOverlay}
+          onPress={closeFabOptions}
+          activeOpacity={1}
+        />
+      )}
 
-              <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>💸</Text>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Split Expenses</Text>
-                  <Text style={styles.featureText}>Easily divide costs for meals, trips, and more</Text>
-                </View>
-              </View>
-
-              <View style={styles.featureItem}>
-                <Text style={styles.featureIcon}>⚖️</Text>
-                <View style={styles.featureContent}>
-                  <Text style={styles.featureTitle}>Track Balances</Text>
-                  <Text style={styles.featureText}>Keep track of who owes what and settle up</Text>
-                </View>
-              </View>
+      {/* Floating Action Button */}
+      <View style={styles.fabContainer}>
+        {/* FAB Options */}
+        {showFabOptions && (
+          <Animated.View
+            style={[
+              styles.fabOptions,
+              {
+                opacity: fabAnimation,
+                transform: [
+                  {
+                    translateY: fabAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.fabOptionContainer}>
+              <Text style={styles.fabOptionLabel}>Add Friend</Text>
+              <TouchableOpacity
+                style={styles.fabOption}
+                onPress={navigateToAddFriend}
+              >
+                <Ionicons name="person-add" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
-          </SectionCard>
-        )}
-      </ScrollView>
 
-      {/* Floating Add Expense Button */}
-      <TouchableOpacity
-        style={styles.fabButton}
-        onPress={navigateToAddFriend}
-      >
-        <Ionicons name="person-add" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+            {hasAnyFriends && (
+              <View style={styles.fabOptionContainer}>
+                <Text style={styles.fabOptionLabel}>Add Expense</Text>
+                <TouchableOpacity
+                  style={styles.fabOption}
+                  onPress={handleAddExpense}
+                >
+                  <Ionicons name="add" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </Animated.View>
+        )}
+
+        {/* Main FAB */}
+        <TouchableOpacity
+          style={styles.fabButton}
+          onPress={toggleFabOptions}
+        >
+          <Ionicons
+            name={showFabOptions ? "close" : "add"}
+            size={28}
+            color="#FFFFFF"
+          />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -264,9 +261,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.body,
-  },
-  safeArea: {
-    flex: 1,
+    paddingBottom: 0,
   },
   centered: {
     flex: 1,
@@ -274,7 +269,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.background.body,
     paddingHorizontal: 24,
     paddingBottom: 12,
     flexDirection: 'row',
@@ -284,81 +279,35 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.light,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.text.primary,
   },
-  notificationButton: {
-    position: 'relative',
+  headerButton: {
     padding: 8,
   },
-  notificationBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: colors.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
   content: {
-    paddingHorizontal: 24,
-    paddingBottom: 100,
-  },
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchInput: {
+    flex: 1,
     backgroundColor: colors.background.primary,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.border.medium,
+    paddingHorizontal: 24,
   },
-  permissionButton: {
-    backgroundColor: colors.primary[600],
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  permissionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  permissionSubtext: {
-    color: colors.primary[100],
-    fontSize: 14,
-  },
-  friendsList: {
-    gap: 12,
+  scrollContent: {
+    paddingTop: 24,
+    paddingBottom: TAB_BAR_HEIGHT + 80, // Tab bar height + FAB space
   },
   friendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
-    borderRadius: 8,
-    marginVertical: 2,
   },
   friendAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 16,
     backgroundColor: colors.background.tertiary,
   },
   friendInfo: {
@@ -368,114 +317,152 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   friendEmail: {
     fontSize: 14,
     color: colors.text.tertiary,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 2,
+    marginBottom: 2,
   },
   transactionBadge: {
     fontSize: 12,
     color: colors.primary[600],
     fontWeight: '500',
   },
-  nonAppUserBadge: {
-    fontSize: 12,
-    color: colors.text.tertiary,
-    fontWeight: '500',
-    fontStyle: 'italic',
-  },
   pendingBadge: {
     fontSize: 12,
     color: '#FF9500',
     fontWeight: '500',
-    fontStyle: 'italic',
   },
-  emptyState: {
+  addNewFriendContainer: {
     alignItems: 'center',
-    paddingVertical: 24,
-  },
-  emptyIcon: {
-    fontSize: 48,
+    marginTop: 24,
     marginBottom: 16,
   },
+  addNewFriendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[600],
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  addNewFriendText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 100,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 24,
+  },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 8,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
     color: colors.text.tertiary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 24,
+    marginBottom: 40,
   },
-  addButton: {
-    backgroundColor: colors.primary[600],
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 16,
+  arrowContainer: {
     alignItems: 'center',
-    shadowColor: colors.primary[600],
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 4,
   },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  featureList: {
-    gap: 20,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  featureIcon: {
-    fontSize: 24,
-    marginRight: 16,
-    marginTop: 2,
-  },
-  featureContent: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 4,
-  },
-  featureText: {
+  arrowText: {
     fontSize: 14,
     color: colors.text.tertiary,
-    lineHeight: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  arrow: {
+    fontSize: 24,
+    marginRight: -60,
+    marginTop: 20,
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: TAB_BAR_HEIGHT, // Properly positioned above tab bar
+    right: 24,
+    alignItems: 'flex-end', // Align everything to the right
+    zIndex: 1000, // Ensure FAB is above overlay
+  },
+  fabOptions: {
+    marginBottom: 16,
+    alignItems: 'flex-end', // Align options to the right
+  },
+  fabOptionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    justifyContent: 'flex-end', // Ensure content aligns to the right
+  },
+  fabOptionLabel: {
+    color: colors.text.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 12,
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  fabOption: {
+    width: 56, // Same width as main FAB for perfect alignment
+    height: 56, // Same height as main FAB for perfect alignment
+    borderRadius: 28,
+    backgroundColor: colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   fabButton: {
-    position: 'absolute',
-    bottom: 90,
-    right: 24,
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: colors.primary[600],
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary[600],
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
     elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  invisibleOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
 
 });
