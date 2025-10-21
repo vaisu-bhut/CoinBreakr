@@ -13,8 +13,7 @@ export interface Contact {
 }
 
 export interface Friend {
-    id?: string; // Legacy field
-    _id?: string; // MongoDB field from server
+    _id: string; // MongoDB field from server
     name: string;
     email: string;
     phoneNumber?: string;
@@ -24,7 +23,7 @@ export interface Friend {
 }
 
 export interface PendingFriend {
-    id: string;
+    _id: string;
     name: string;
     email?: string;
     phoneNumber?: string;
@@ -61,8 +60,6 @@ export interface SearchResult {
     appUsers: AppUser[];
     contacts: Contact[];
 }
-
-
 
 class FriendsService {
     private baseURL: string;
@@ -235,30 +232,6 @@ class FriendsService {
         return this.makeAuthedRequest<Group[]>('/groups', {
             method: 'GET'
         });
-    }
-
-    // Invitation Methods
-    async sendInvitation(contact: Contact): Promise<void> {
-        return this.makeAuthedRequest<void>('/invitations/send', {
-            method: 'POST',
-            body: JSON.stringify({
-                name: contact.name,
-                phoneNumbers: contact.phoneNumbers,
-                emails: contact.emails,
-            }),
-        });
-    }
-
-    // Local search in contacts
-    searchLocalContacts(contacts: Contact[], query: string): Contact[] {
-        if (!query.trim()) return [];
-
-        const searchTerm = query.toLowerCase();
-        return contacts.filter(contact =>
-            contact.name.toLowerCase().includes(searchTerm) ||
-            contact.phoneNumbers?.some(phone => phone.includes(searchTerm)) ||
-            contact.emails?.some(email => email.toLowerCase().includes(searchTerm))
-        );
     }
 }
 

@@ -6,7 +6,6 @@ import {
   Modal,
   TouchableOpacity,
   TextInput,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,8 +14,13 @@ import colors from '../theme/colors';
 interface AddPersonModalProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (person: { name: string; email?: string; phoneNumber?: string; countryCode?: string }) => void;
+  onSubmit: (person: { name: string; email?: string; phoneNumber?: string }) => void;
   initialQuery?: string;
+  initialData?: {
+    name?: string;
+    email?: string;
+    phoneNumber?: string;
+  };
 }
 
 const AddPersonModal: React.FC<AddPersonModalProps> = ({
@@ -24,43 +28,42 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
   onClose,
   onSubmit,
   initialQuery = '',
+  initialData,
 }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('+1');
-  const [errors, setErrors] = useState<{
-    name?: string;
-    email?: string;
-    phoneNumber?: string;
-    form?: string;
-  }>({});
 
   useEffect(() => {
-    if (visible && initialQuery) {
-      // Smart pre-fill based on query type
-      if (isEmail(initialQuery)) {
-        setEmail(initialQuery);
-        setName('');
-        setPhoneNumber('');
-      } else if (isPhoneNumber(initialQuery)) {
-        setPhoneNumber(initialQuery);
-        setName('');
-        setEmail('');
+    if (visible) {
+      if (initialData) {
+        // Use provided initial data for editing
+        setName(initialData.name || '');
+        setEmail(initialData.email || '');
+        setPhoneNumber(initialData.phoneNumber || '');
+      } else if (initialQuery) {
+        // Smart pre-fill based on query type
+        if (isEmail(initialQuery)) {
+          setEmail(initialQuery);
+          setName('');
+          setPhoneNumber('');
+        } else if (isPhoneNumber(initialQuery)) {
+          setPhoneNumber(initialQuery);
+          setName('');
+          setEmail('');
+        } else {
+          setName(initialQuery);
+          setEmail('');
+          setPhoneNumber('');
+        }
       } else {
-        setName(initialQuery);
+        // Reset form when opening without query or data
+        setName('');
         setEmail('');
         setPhoneNumber('');
       }
-    } else if (visible) {
-      // Reset form when opening without query
-      setName('');
-      setEmail('');
-      setPhoneNumber('');
-      setCountryCode('+1');
     }
-    setErrors({});
-  }, [visible, initialQuery]);
+  }, [visible, initialQuery, initialData]);
 
   const isEmail = (text: string): boolean => {
     const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -72,62 +75,19 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
     return phoneRegex.test(text.replace(/[\s\-\(\)]/g, ''));
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: typeof errors = {};
 
-    // Name validation
-    if (!name.trim()) {
-      newErrors.name = 'Name is required';
-    } else if (name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
-    }
-
-    // Email validation
-    if (email.trim() && !isEmail(email.trim())) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    // Phone validation
-    if (phoneNumber.trim()) {
-      const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
-      if (cleanPhone.length < 7 || cleanPhone.length > 15) {
-        newErrors.phoneNumber = 'Phone number must be 7-15 digits';
-      } else if (!/^\d+$/.test(cleanPhone)) {
-        newErrors.phoneNumber = 'Phone number can only contain digits';
-      }
-    }
-
-    // At least one contact method required
-    if (!email.trim() && !phoneNumber.trim()) {
-      newErrors.form = 'Please provide either an email or phone number';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleSubmit = () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    const fullPhoneNumber = phoneNumber.trim() 
-      ? `${countryCode}${phoneNumber.replace(/[\s\-\(\)]/g, '')}`
-      : undefined;
-
     onSubmit({
       name: name.trim(),
       email: email.trim() || undefined,
-      phoneNumber: fullPhoneNumber,
-      countryCode: phoneNumber.trim() ? countryCode : undefined,
+      phoneNumber: phoneNumber.trim() || undefined,
     });
 
     // Reset form
     setName('');
     setEmail('');
     setPhoneNumber('');
-    setCountryCode('+1');
-    setErrors({});
   };
 
   const handleClose = () => {
@@ -147,7 +107,9 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Add New Person</Text>
+            <Text style={styles.headerTitle}>
+              {initialData ? 'Edit Person' : 'Add New Person'}
+            </Text>
             <TouchableOpacity onPress={handleClose}>
               <Ionicons name="close" size={24} color={colors.text.tertiary} />
             </TouchableOpacity>
@@ -155,72 +117,39 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <View style={styles.form}>
-              {errors.form && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{errors.form}</Text>
-                </View>
-              )}
-
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Name *</Text>
+                <Text style={styles.label}>Name</Text>
                 <TextInput
-                  style={[styles.input, errors.name && styles.inputError]}
+                  style={styles.input}
                   value={name}
-                  onChangeText={(text) => {
-                    setName(text);
-                    if (errors.name) setErrors({ ...errors, name: undefined });
-                  }}
+                  onChangeText={setName}
                   placeholder="Enter full name"
                   autoCapitalize="words"
                 />
-                {errors.name && <Text style={styles.fieldError}>{errors.name}</Text>}
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email</Text>
                 <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
+                  style={styles.input}
                   value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (errors.email) setErrors({ ...errors, email: undefined });
-                    if (errors.form) setErrors({ ...errors, form: undefined });
-                  }}
+                  onChangeText={setEmail}
                   placeholder="Enter email address"
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                {errors.email && <Text style={styles.fieldError}>{errors.email}</Text>}
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Phone Number</Text>
-                <View style={styles.phoneContainer}>
-                  <TextInput
-                    style={styles.countryCodeInput}
-                    value={countryCode}
-                    onChangeText={setCountryCode}
-                    placeholder="+1"
-                    keyboardType="phone-pad"
-                  />
-                  <TextInput
-                    style={[styles.phoneInput, errors.phoneNumber && styles.inputError]}
-                    value={phoneNumber}
-                    onChangeText={(text) => {
-                      setPhoneNumber(text);
-                      if (errors.phoneNumber) setErrors({ ...errors, phoneNumber: undefined });
-                      if (errors.form) setErrors({ ...errors, form: undefined });
-                    }}
-                    placeholder="Enter phone number"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-                {errors.phoneNumber && <Text style={styles.fieldError}>{errors.phoneNumber}</Text>}
+                <TextInput
+                  style={styles.input}
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  placeholder="Enter phone number"
+                  keyboardType="phone-pad"
+                />
               </View>
-
-              <Text style={styles.helperText}>
-                * Name is required. Please provide either email or phone number.
-              </Text>
             </View>
           </ScrollView>
 
@@ -229,7 +158,9 @@ const AddPersonModal: React.FC<AddPersonModalProps> = ({
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitButtonText}>Add Person</Text>
+              <Text style={styles.submitButtonText}>
+                {initialData ? 'Save Changes' : 'Add Person'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -277,19 +208,7 @@ const styles = StyleSheet.create({
   form: {
     padding: 20,
   },
-  errorContainer: {
-    backgroundColor: colors.error + '10',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.error + '30',
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 14,
-    fontWeight: '500',
-  },
+
   inputGroup: {
     marginBottom: 16,
   },
@@ -307,46 +226,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: colors.border.medium,
-  },
-  inputError: {
-    borderColor: colors.error,
-    backgroundColor: colors.error + '05',
-  },
-  phoneContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  countryCodeInput: {
-    backgroundColor: colors.background.tertiary,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.border.medium,
-    width: 80,
-    textAlign: 'center',
-  },
-  phoneInput: {
-    backgroundColor: colors.background.tertiary,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.border.medium,
-    flex: 1,
-  },
-  fieldError: {
-    color: colors.error,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  helperText: {
-    fontSize: 12,
-    color: colors.text.tertiary,
-    marginTop: 8,
-    lineHeight: 16,
   },
   footer: {
     flexDirection: 'row',

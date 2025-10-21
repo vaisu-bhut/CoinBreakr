@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +31,21 @@ const ReviewFriendsScreen: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingFriend, setEditingFriend] = useState<LocalPendingFriend | null>(null);
 
+
+
+
+  const isValidPhoneNumber = (phoneNumber: string): boolean => {
+    // Remove US country code and any formatting
+    const cleanPhone = phoneNumber.replace(/^\+1/, '').replace(/[\s\-\(\)]/g, '');
+    // Check if it's exactly 10 digits
+    return /^\d{10}$/.test(cleanPhone);
+  };
+
+  const extractPhoneNumber = (phoneNumber: string): string => {
+    // Remove US country code and return just the 10-digit number
+    return phoneNumber.replace(/^\+1/, '').replace(/[\s\-\(\)]/g, '');
+  };
+
   const removeFriend = (friendId: string) => {
     setPendingFriends(pendingFriends.filter(f => f.id !== friendId));
   };
@@ -39,7 +55,7 @@ const ReviewFriendsScreen: React.FC = () => {
     setShowEditModal(true);
   };
 
-  const handleEditSubmit = (updatedData: { name: string; email?: string; phoneNumber?: string; countryCode?: string }) => {
+  const handleEditSubmit = (updatedData: { name: string; email?: string; phoneNumber?: string }) => {
     if (editingFriend) {
       setPendingFriends(pendingFriends.map(f =>
         f.id === editingFriend.id
@@ -57,34 +73,29 @@ const ReviewFriendsScreen: React.FC = () => {
       return;
     }
 
+
+
     setIsAdding(true);
     try {
-      // Validate and prepare all friends data for the API
+      // Prepare all friends data for the API
       const friendsData = pendingFriends.map(friend => {
-        // Validate that friend has required data
-        if (!friend.name || (!friend.email && !friend.phoneNumber)) {
-          throw new Error(`Friend "${friend.name || 'Unknown'}" must have a name and either email or phone number`);
-        }
-
         if (friend.type === 'appUser') {
-          // For app users, send user ID along with required name and contact info
+          // For app users, send user ID along with name and contact info
           const appUserData = {
             userId: friend.id.replace('user-', ''),
             name: friend.name,
             email: friend.email || undefined,
             phoneNumber: friend.phoneNumber || undefined,
-            countryCode: friend.countryCode || undefined,
             type: 'appUser'
           };
           console.log('App user data being sent:', appUserData);
           return appUserData;
         } else {
-          // For manual entries and contacts, send full data
+          // For manual entries and contacts, send name, email, and phoneNumber
           const contactData = {
             name: friend.name,
             email: friend.email || undefined,
             phoneNumber: friend.phoneNumber || undefined,
-            countryCode: friend.countryCode || undefined,
             type: friend.type
           };
           console.log('Contact/manual data being sent:', contactData);
@@ -95,10 +106,7 @@ const ReviewFriendsScreen: React.FC = () => {
       console.log('All friends data being sent to API:', friendsData);
 
       // Send all friends data to the API
-      const response = await friendsService.addFriend(friendsData);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to add friends');
-      }
+      await friendsService.addFriend(friendsData);
 
       // Show success message
       Alert.alert(
@@ -108,11 +116,20 @@ const ReviewFriendsScreen: React.FC = () => {
           {
             text: 'OK',
             onPress: () => {
+              console.log('Friends added successfully, processing next steps...');
               // If only one friend was added, offer to send SMS
               if (pendingFriends.length === 1) {
-                showSMSOption(pendingFriends[0]);
+                const friend = pendingFriends[0];
+                console.log('Single friend added:', friend.name);
+                if (friend.phoneNumber && friend.type !== 'appUser') {
+                  showSMSOption(friend);
+                } else {
+                  console.log('No phone number or is app user, navigating directly');
+                  navigation.navigate('Main', { screen: 'Friends' });
+                }
               } else {
                 // For multiple friends, offer to send automated messages
+                console.log('Multiple friends added, checking for SMS options');
                 sendAutomatedMessages();
               }
             }
@@ -127,46 +144,88 @@ const ReviewFriendsScreen: React.FC = () => {
     }
   };
 
-  const showSMSOption = (friend: LocalPendingFriend) => {
+  const showSMSOption = async (friend: LocalPendingFriend) => {
+    console.log('showSMSOption called for friend:', friend.name, 'Phone:', friend.phoneNumber);
+
     if (!friend.phoneNumber) {
+      console.log('No phone number, navigating directly to Friends screen');
       navigation.navigate('Main', { screen: 'Friends' });
       return;
     }
 
+    // Validate phone number before showing SMS option
+    if (!isValidPhoneNumber(friend.phoneNumber)) {
+      console.log('Invalid phone number, navigating directly to Friends screen');
+      navigation.navigate('Main', { screen: 'Friends' });
+      return;
+    }
+
+    console.log('Showing SMS option alert');
     Alert.alert(
       'Send Invitation',
       `Would you like to send an invitation message to ${friend.name}?`,
       [
-        { text: 'Skip', onPress: () => navigation.navigate('Main', { screen: 'Friends' }) },
-        { text: 'Send SMS', onPress: () => sendSMS(friend) }
+        {
+          text: 'Skip',
+          onPress: () => {
+            console.log('User skipped SMS, navigating to Friends screen');
+            navigation.navigate('Main', { screen: 'Friends' });
+          }
+        },
+        {
+          text: 'Send SMS',
+          onPress: () => {
+            console.log('User chose to send SMS');
+            sendSMS(friend, true);
+          }
+        }
       ]
     );
   };
 
-  const sendSMS = (friend: LocalPendingFriend) => {
+  const sendSMS = async (friend: LocalPendingFriend, shouldNavigate: boolean = true) => {
+    console.log('Attempting to send SMS to:', friend.phoneNumber);
+
     const message = `Hi ${friend.name}! I've added you to CoinBreakr, a great app for splitting expenses with friends. Download it to easily manage shared costs: https://coinbreakr.app`;
 
-    const url = `sms:${friend.phoneNumber}?body=${encodeURIComponent(message)}`;
+    // Different URL formats for different platforms
+    let url: string;
+    if (Platform.OS === 'ios') {
+      url = `sms:${friend.phoneNumber}&body=${encodeURIComponent(message)}`;
+    } else {
+      url = `sms:${friend.phoneNumber}?body=${encodeURIComponent(message)}`;
+    }
 
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(url);
-        } else {
-          Alert.alert('Error', 'SMS not supported on this device');
-        }
-      })
-      .catch((error) => {
-        console.error('Error opening SMS:', error);
-        Alert.alert('Error', 'Failed to open SMS app');
-      })
-      .finally(() => {
+    console.log('SMS URL:', url);
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      console.log('SMS supported:', supported);
+
+      if (supported) {
+        console.log('Opening SMS app...');
+        await Linking.openURL(url);
+        console.log('SMS app opened successfully');
+      } else {
+        console.log('SMS not supported on this device');
+        Alert.alert('Error', 'SMS not supported on this device');
+      }
+    } catch (error) {
+      console.error('Error opening SMS:', error);
+      Alert.alert('Error', `Failed to open SMS app: ${error}`);
+    }
+
+    // Add a small delay before navigation to ensure SMS app has time to open
+    if (shouldNavigate) {
+      setTimeout(() => {
+        console.log('Navigating to Friends screen...');
         navigation.navigate('Main', { screen: 'Friends' });
-      });
+      }, 1000);
+    }
   };
 
   const sendAutomatedMessages = async () => {
-    const friendsWithPhones = pendingFriends.filter(f => f.phoneNumber && f.type !== 'appUser');
+    const friendsWithPhones = pendingFriends.filter(f => f.phoneNumber && f.type !== 'appUser' && isValidPhoneNumber(f.phoneNumber));
 
     if (friendsWithPhones.length === 0) {
       navigation.navigate('Main', { screen: 'Friends' });
@@ -180,64 +239,83 @@ const ReviewFriendsScreen: React.FC = () => {
         { text: 'Skip', onPress: () => navigation.navigate('Main', { screen: 'Friends' }) },
         {
           text: 'Send All',
-          onPress: () => {
-            // Send SMS to all friends with phone numbers
-            friendsWithPhones.forEach((friend, index) => {
-              setTimeout(() => sendSMS(friend), index * 1000); // Stagger SMS sends
-            });
+          onPress: async () => {
+            console.log('Sending SMS to multiple friends:', friendsWithPhones.length);
+            try {
+              // Send SMS to all friends with phone numbers (without navigation for each)
+              for (let i = 0; i < friendsWithPhones.length; i++) {
+                const friend = friendsWithPhones[i];
+                console.log(`Sending SMS ${i + 1}/${friendsWithPhones.length} to ${friend.name}`);
+                await sendSMS(friend, false); // Don't navigate for each SMS
+                // Add a small delay between SMS sends to avoid overwhelming the system
+                if (i < friendsWithPhones.length - 1) {
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              }
+            } catch (error) {
+              console.error('Error in bulk SMS sending:', error);
+            } finally {
+              // Navigate to Friends screen after all SMS are sent (or if there's an error)
+              console.log('Bulk SMS complete, navigating to Friends screen');
+              setTimeout(() => {
+                navigation.navigate('Main', { screen: 'Friends' });
+              }, 1000);
+            }
           }
         }
       ]
     );
   };
 
-  const renderFriend = (friend: LocalPendingFriend) => (
-    <View key={friend.id} style={styles.friendItem}>
-      <View style={styles.friendAvatar}>
-        {friend.profileImage ? (
-          <Image source={{ uri: friend.profileImage }} style={styles.avatarImage} />
-        ) : (
-          <Ionicons name="person" size={24} color={colors.text.tertiary} />
-        )}
-      </View>
+  const renderFriend = (friend: LocalPendingFriend) => {
+    return (
+      <View key={friend.id} style={styles.friendItem}>
+        <View style={styles.friendAvatar}>
+          {friend.profileImage ? (
+            <Image source={{ uri: friend.profileImage }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons name="person" size={24} color={colors.text.tertiary} />
+          )}
+        </View>
 
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{friend.name}</Text>
-        <Text style={styles.friendDetail}>
-          {friend.email || friend.phoneNumber || 'Manual entry'}
-        </Text>
-        <Text style={styles.friendType}>
-          {friend.type === 'appUser' ? 'CoinBreakr User' :
-            friend.type === 'contact' ? 'From Contacts' : 'Manual Entry'}
-        </Text>
-      </View>
+        <View style={styles.friendInfo}>
+          <Text style={styles.friendName}>{friend.name || 'No name'}</Text>
+          <Text style={styles.friendDetail}>
+            {friend.email || friend.phoneNumber || 'No contact info'}
+          </Text>
+          <Text style={styles.friendType}>
+            {friend.type === 'appUser' ? 'CoinBreakr User' :
+              friend.type === 'contact' ? 'From Contacts' : 'Manual Entry'}
+          </Text>
+        </View>
 
-      <View style={styles.friendActions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => editFriend(friend)}
-        >
-          <Ionicons name="pencil" size={18} color={colors.primary[600]} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => removeFriend(friend.id)}
-        >
-          <Ionicons name="trash-outline" size={18} color={colors.error} />
-        </TouchableOpacity>
+        <View style={styles.friendActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => editFriend(friend)}
+          >
+            <Ionicons name="pencil" size={18} color={colors.primary[600]} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => removeFriend(friend.id)}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 2 }]}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Review Friends</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>Review Friends</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -246,6 +324,7 @@ const ReviewFriendsScreen: React.FC = () => {
             <Text style={styles.summaryText}>
               {pendingFriends.length} friend{pendingFriends.length !== 1 ? 's' : ''} ready to add
             </Text>
+
           </View>
 
           {pendingFriends.length > 0 ? (
@@ -299,6 +378,11 @@ const ReviewFriendsScreen: React.FC = () => {
             }}
             onSubmit={handleEditSubmit}
             initialQuery={editingFriend.name}
+            initialData={{
+              name: editingFriend.name,
+              email: editingFriend.email,
+              phoneNumber: editingFriend.phoneNumber
+            }}
           />
         )}
       </SafeAreaView>
@@ -320,7 +404,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 12,
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.background.body,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
   },
@@ -334,6 +418,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    backgroundColor: colors.background.primary,
     paddingHorizontal: 24,
   },
   summary: {
@@ -400,6 +485,7 @@ const styles = StyleSheet.create({
     color: colors.primary[600],
     fontWeight: '500',
   },
+
   friendActions: {
     flexDirection: 'row',
     gap: 8,
@@ -431,7 +517,7 @@ const styles = StyleSheet.create({
   bottomButtons: {
     flexDirection: 'row',
     padding: 24,
-    backgroundColor: colors.background.secondary,
+    backgroundColor: colors.background.body,
     borderTopWidth: 1,
     borderTopColor: colors.border.light,
     gap: 12,
