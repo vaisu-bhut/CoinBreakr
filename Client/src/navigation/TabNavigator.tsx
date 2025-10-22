@@ -5,8 +5,8 @@ import colors from '../theme/colors';
 
 import { HomeScreen } from '../screens/home';
 import { GroupsScreen } from '../screens/groups';
-import { FriendsScreen } from '../screens/friends';
 import { ProfileScreen } from '../screens/profile';
+import FriendsStackNavigator from './FriendsStackNavigator';
 
 const Tab = createBottomTabNavigator();
 
@@ -65,7 +65,7 @@ const TabNavigator: React.FC = () => {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Groups" component={GroupsScreen} />
-      <Tab.Screen name="Friends" component={FriendsScreen} />
+      <Tab.Screen name="Friends" component={FriendsStackNavigator} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
