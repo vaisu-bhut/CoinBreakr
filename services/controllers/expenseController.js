@@ -111,6 +111,8 @@ const createExpense = async (req, res) => {
       }
     }
 
+    console.log('Payer:', payerId);
+
     // Check if all split partners are valid
     const user = await User.findById(req.userId);
     const splitUserIds = splitWith.map(split => split.user);
@@ -140,6 +142,7 @@ const createExpense = async (req, res) => {
         }
       }
     }
+    console.log('Split User IDs:', splitUserIds); 
 
     // Validate and parse date
     let parsedDate = new Date();
@@ -152,7 +155,7 @@ const createExpense = async (req, res) => {
         });
       }
     }
-
+    console.log('Parsed Date:', parsedDate);
     // Create expense
     const expense = new Expense({
       description,
@@ -165,7 +168,7 @@ const createExpense = async (req, res) => {
       date: parsedDate,
       group: groupId || null
     });
-
+    console.log('Expense:', expense);
     await expense.save();
 
     // Populate the expense with user details
@@ -175,7 +178,7 @@ const createExpense = async (req, res) => {
     if (groupId) {
       await expense.populate('group', 'name');
     }
-
+    console.log('Populated Expense:', expense);
     res.status(201).json({
       success: true,
       data: expense,
