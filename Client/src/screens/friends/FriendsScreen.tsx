@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image, StatusBar, Animated } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image, StatusBar, Animated, RefreshControl } from 'react-native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
@@ -8,20 +8,33 @@ import { friendsService, Friend, PendingFriend } from '../../services/friends';
 
 // Constants for consistent sizing across all screens
 const TAB_BAR_HEIGHT = 65; // From TabNavigator configuration
-const FAB_BOTTOM_MARGIN = 20; // Space above tab bar
 
 const FriendsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingFriends, setPendingFriends] = useState<PendingFriend[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showFabOptions, setShowFabOptions] = useState(false);
   const [fabAnimation] = useState(new Animated.Value(0));
 
   useEffect(() => {
     checkInitialState();
   }, []);
+
+  // Handle navigation params and refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const params = route.params as any;
+      if (params?.refresh) {
+        loadFriends(false); // Don't show refresh spinner for navigation refresh
+        // Clear the refresh parameter to prevent repeated refreshes
+        navigation.setParams({ refresh: undefined });
+      }
+    }, [route.params])
+  );
 
   const checkInitialState = async () => {
     try {
@@ -33,8 +46,12 @@ const FriendsScreen: React.FC = () => {
     }
   };
 
-  const loadFriends = async () => {
+  const loadFriends = async (isRefresh: boolean = false) => {
     try {
+      if (isRefresh) {
+        setRefreshing(true);
+      }
+
       const response = await friendsService.getFriends();
       setFriends(response.friends || []);
       setPendingFriends(response.pendingFriends || []);
@@ -43,7 +60,15 @@ const FriendsScreen: React.FC = () => {
       Alert.alert('Error', 'Unable to load friends. Please check your connection and try again.');
       setFriends([]);
       setPendingFriends([]);
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      }
     }
+  };
+
+  const onRefresh = () => {
+    loadFriends(true);
   };
 
   const navigateToAddFriend = () => {
@@ -53,8 +78,8 @@ const FriendsScreen: React.FC = () => {
 
   const handleAddExpense = () => {
     setShowFabOptions(false);
-    // TODO: Implement add expense functionality
-    Alert.alert('Add Expense', 'Add expense functionality will be implemented here');
+    // Navigate to add expense screen without pre-selected friend
+    navigation.navigate('AddExpense');
   };
 
   const toggleFabOptions = () => {
@@ -117,6 +142,9 @@ const FriendsScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           onScrollBeginDrag={closeFabOptions}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
           {hasAnyFriends ? (
             <>
@@ -127,7 +155,7 @@ const FriendsScreen: React.FC = () => {
                   style={styles.friendItem}
                   onPress={() => {
                     closeFabOptions();
-                    console.log('Friend selected:', friend.name);
+                    navigation.navigate('FriendExpense', { friend });
                   }}
                 >
                   <Image
@@ -260,7 +288,7 @@ const FriendsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.body,
+    backgroundColor: colors.background.primary,
     paddingBottom: 0,
   },
   centered: {
@@ -290,6 +318,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
     paddingHorizontal: 24,
+    marginBottom: -13
   },
   scrollContent: {
     paddingTop: 24,

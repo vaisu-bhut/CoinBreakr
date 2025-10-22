@@ -20,6 +20,8 @@ export interface Friend {
     profileImage?: string;
     hasTransactions: boolean;
     isContactSynced: boolean;
+    isAppUser?: boolean;
+    phone?: string; // Alternative field name for phone number
 }
 
 export interface PendingFriend {
