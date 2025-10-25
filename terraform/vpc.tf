@@ -2,7 +2,7 @@
 resource "google_compute_network" "vpc_network" {
   name                    = "${var.environment}-coinbreakr-vpc"
   auto_create_subnetworks = false
-  routing_mode           = "REGIONAL"
+  routing_mode            = "REGIONAL"
 }
 
 # Public Subnets
