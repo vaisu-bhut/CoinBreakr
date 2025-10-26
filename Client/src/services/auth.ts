@@ -1,6 +1,4 @@
-import { getApiUrl } from '../config/api';
-
-const BASE_URL = getApiUrl();
+import { makeApiRequest } from '../config/api';
 
 export interface LoginRequest {
 	email: string;
@@ -30,18 +28,10 @@ export interface AuthData {
 
 
 class AuthService {
-	private baseURL: string;
-
-	constructor(baseURL: string) {
-		this.baseURL = baseURL;
-	}
-
 	private async makeRequest<T>(
 		endpoint: string,
 		options: RequestInit = {}
 	): Promise<T> {
-		const url = `${this.baseURL}${endpoint}`;
-
 		const defaultHeaders = {
 			'Content-Type': 'application/json',
 		};
@@ -55,7 +45,7 @@ class AuthService {
 		};
 
 		try {
-			const response = await fetch(url, config);
+			const response = await makeApiRequest(endpoint, config);
 
 			// Try to parse JSON; guard against empty body
 			let data: any = null;
@@ -111,4 +101,4 @@ class AuthService {
 	}
 }
 
-export const authService = new AuthService(BASE_URL);
+export const authService = new AuthService();
