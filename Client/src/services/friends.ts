@@ -1,9 +1,7 @@
 import * as Contacts from 'expo-contacts';
 import { authStorage } from './authStorage';
-import { getApiUrl } from '../config/api';
+import { makeApiRequest } from '../config/api';
 import type { ApiErrorResponse } from './auth';
-
-const BASE_URL = getApiUrl();
 
 export interface Contact {
     id: string;
@@ -64,15 +62,8 @@ export interface SearchResult {
 }
 
 class FriendsService {
-    private baseURL: string;
-
-    constructor(baseURL: string) {
-        this.baseURL = baseURL;
-    }
-
     private async makeAuthedRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const token = await authStorage.getToken();
-        const url = `${this.baseURL}${endpoint}`;
 
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
@@ -88,7 +79,7 @@ class FriendsService {
         };
 
         try {
-            const response = await fetch(url, config);
+            const response = await makeApiRequest(endpoint, config);
 
             let data: any = null;
             try {
@@ -237,4 +228,4 @@ class FriendsService {
     }
 }
 
-export const friendsService = new FriendsService(BASE_URL);
+export const friendsService = new FriendsService();
