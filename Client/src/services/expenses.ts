@@ -1,8 +1,6 @@
 import { authStorage } from './authStorage';
-import { getApiUrl } from '../config/api';
+import { makeApiRequest } from '../config/api';
 import type { ApiErrorResponse } from './auth';
-
-const BASE_URL = getApiUrl();
 
 export interface ExpenseUser {
     _id: string;
@@ -50,15 +48,8 @@ export interface ExpenseFilters {
 }
 
 class ExpensesService {
-    private baseURL: string;
-
-    constructor(baseURL: string) {
-        this.baseURL = baseURL;
-    }
-
     private async makeAuthedRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const token = await authStorage.getToken();
-        const url = `${this.baseURL}${endpoint}`;
 
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
@@ -74,7 +65,7 @@ class ExpensesService {
         };
 
         try {
-            const response = await fetch(url, config);
+            const response = await makeApiRequest(endpoint, config);
 
             let data: any = null;
             try {
@@ -173,4 +164,4 @@ class ExpensesService {
     }
 }
 
-export const expensesService = new ExpensesService(BASE_URL);
+export const expensesService = new ExpensesService();

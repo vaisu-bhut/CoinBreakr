@@ -6,10 +6,7 @@ resource "google_dns_managed_zone" "beleno_zone" {
   
   depends_on = [google_project_service.dns_api]
   
-  # Prevent accidental deletion
-  lifecycle {
-    prevent_destroy = true
-  }
+
 }
 
 # A record for API subdomain (main environment)
