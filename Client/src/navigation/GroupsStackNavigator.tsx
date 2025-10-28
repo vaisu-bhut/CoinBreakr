@@ -1,6 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { GroupsScreen, CreateGroupScreen, GroupExpensesScreen, GroupSettingsScreen } from '../screens/groups';
+import { GroupsScreen, CreateGroupScreen, GroupExpensesScreen, GroupSettingsScreen, AddGroupMembersScreen } from '../screens/groups';
 
 const Stack = createStackNavigator();
 
@@ -16,6 +16,7 @@ const GroupsStackNavigator: React.FC = () => {
       <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
       <Stack.Screen name="GroupExpenses" component={GroupExpensesScreen} />
       <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} />
+      <Stack.Screen name="AddGroupMembers" component={AddGroupMembersScreen} />
     </Stack.Navigator>
   );
 };

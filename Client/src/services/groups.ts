@@ -4,7 +4,7 @@ import type { ApiErrorResponse } from './auth';
 
 export interface GroupMember {
     _id: string;
-    user: string;
+    user: string | { _id: string; name: string; email: string; profileImage?: string };
     role: string;
     joinedAt: string;
 }
@@ -185,13 +185,41 @@ class GroupsService {
         }
     }
 
-    async addMemberToGroup(groupId: string, members: string[]): Promise<Group> {
+    async getGroupByIdWithMembers(groupId: string): Promise<Group> {
+        try {
+            const group = await this.makeAuthedRequest<Group>(`/groups/${groupId}?populate=members.user`, {
+                method: 'GET',
+            });
+            return group;
+        } catch (error) {
+
+            throw new Error('Failed to get group with members');
+        }
+    }
+
+    async addMemberToGroup(groupId: string, memberEmail: string, role: string = 'member'): Promise<Group> {
         try {
             const updatedGroup = await this.makeAuthedRequest<Group>(`/groups/${groupId}/members`, {
                 method: 'POST',
-                body: JSON.stringify({ members }),
+                body: JSON.stringify({ memberEmail, role }),
             });
             return updatedGroup;
+        } catch (error) {
+
+            throw new Error('Failed to add member to group');
+        }
+    }
+
+    async addMembersToGroup(groupId: string, members: { email: string; role?: string }[]): Promise<Group> {
+        try {
+            let updatedGroup: Group | null = null;
+            
+            // Add members one by one
+            for (const member of members) {
+                updatedGroup = await this.addMemberToGroup(groupId, member.email, member.role || 'member');
+            }
+            
+            return updatedGroup!;
         } catch (error) {
 
             throw new Error('Failed to add members to group');
