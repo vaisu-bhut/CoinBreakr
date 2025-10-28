@@ -344,7 +344,7 @@ const FriendExpenseScreen: React.FC = () => {
         >
           {expenses.length > 0 ? (
             <>
-              {expenses.map((expense) => {
+              {expenses.map((expense, index) => {
                 const status = getExpenseStatus(expense);
                 const userPaid = expense.paidBy._id === userId;
                 const splitAmount = expense.splitWith.find(split =>
@@ -354,7 +354,10 @@ const FriendExpenseScreen: React.FC = () => {
                 return (
                   <TouchableOpacity
                     key={expense._id}
-                    style={styles.expenseItem}
+                    style={[
+                      styles.expenseItem,
+                      index === expenses.length - 1 && styles.lastExpenseItem
+                    ]}
                     onPress={() => handleExpensePress(expense)}
                   >
                     <View style={styles.expenseLeft}>
@@ -532,6 +535,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastExpenseItem: {
+    borderBottomWidth: 0,
   },
   expenseLeft: {
     flex: 1,

@@ -395,7 +395,7 @@ const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Account Actions Section */}
-        <View style={styles.section}>
+        <View style={styles.lastSection}>
           <Text style={styles.sectionTitle}>Account Actions</Text>
           
           <TouchableOpacity
@@ -545,6 +545,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text.primary,
     marginBottom: 16,
+  },
+  lastSection: {
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
   },
   profileHeader: {
     flexDirection: 'row',
