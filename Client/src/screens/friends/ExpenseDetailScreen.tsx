@@ -17,6 +17,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
+import { getProfileImageUri } from '../../utils/defaultImage';
 import { expensesService, Expense } from '../../services/expenses';
 import { friendsService } from '../../services/friends';
 import { useAuth } from '../../hooks/useAuth';
@@ -214,7 +215,10 @@ const ExpenseDetailScreen: React.FC = () => {
 
       const updatedExpense = await expensesService.updateExpense(expense._id, updateData);
 
-      setExpense(updatedExpense);
+      // Ensure we have the updated data structure with populated fields
+      const refreshedExpense = await expensesService.getExpenseById(expense._id);
+      
+      setExpense(refreshedExpense);
       setIsEditing(false);
 
       Alert.alert('Success', 'Expense has been updated successfully.');
@@ -321,7 +325,7 @@ const ExpenseDetailScreen: React.FC = () => {
       <StatusBar backgroundColor={colors.background.body} barStyle="dark-content" />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top - 15 }]}>
+      <View style={[styles.header, { paddingTop: insets.top - 18 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -492,7 +496,7 @@ const ExpenseDetailScreen: React.FC = () => {
                           }}
                         >
                           <Image
-                            source={{ uri: participant.profileImage || 'https://placehold.co/24x24' }}
+                            source={{ uri: getProfileImageUri(participant.profileImage, 24) }}
                             style={styles.optionAvatar}
                           />
                           <Text style={styles.optionText}>{participant.name}</Text>
@@ -507,7 +511,7 @@ const ExpenseDetailScreen: React.FC = () => {
               ) : (
                 <View style={styles.paymentUser}>
                   <Image
-                    source={{ uri: expense.paidBy?.profileImage || 'https://placehold.co/24x24' }}
+                    source={{ uri: getProfileImageUri(expense.paidBy?.profileImage, 24) }}
                     style={styles.userAvatar}
                   />
                   <Text style={styles.paymentUserName}>{expense.paidBy?.name || 'Unknown'}</Text>
@@ -627,7 +631,7 @@ const ExpenseDetailScreen: React.FC = () => {
                 <View key={split.userId} style={styles.splitRow}>
                   <View style={styles.splitUser}>
                     <Image
-                      source={{ uri: split.userImage || 'https://placehold.co/32x32' }}
+                      source={{ uri: getProfileImageUri(split.userImage, 32) }}
                       style={styles.splitAvatar}
                     />
                     <Text style={styles.splitUserName}>{split.userName}</Text>
@@ -651,7 +655,7 @@ const ExpenseDetailScreen: React.FC = () => {
                 <View key={index} style={styles.splitRow}>
                   <View style={styles.splitUser}>
                     <Image
-                      source={{ uri: split.user?.profileImage || 'https://placehold.co/32x32' }}
+                      source={{ uri: getProfileImageUri(split.user?.profileImage, 32) }}
                       style={styles.splitAvatar}
                     />
                     <Text style={styles.splitUserName}>{split.user?.name || 'Unknown'}</Text>
@@ -797,7 +801,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.background.body,
     paddingHorizontal: 24,
-    paddingBottom: 12,
+    // paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,

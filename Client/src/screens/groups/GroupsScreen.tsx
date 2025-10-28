@@ -163,9 +163,6 @@ const GroupsScreen: React.FC = () => {
                     <Text style={styles.memberCount}>
                       {group.members.length} member{group.members.length !== 1 ? 's' : ''}
                     </Text>
-                    {group.hasTransactions && (
-                      <Text style={styles.transactionBadge}>Has expenses</Text>
-                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
                 </TouchableOpacity>

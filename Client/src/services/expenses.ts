@@ -108,9 +108,12 @@ class ExpensesService {
     }
 
     async getExpenseById(expenseId: string): Promise<Expense> {
-        return this.makeAuthedRequest<Expense>(`/expenses/${expenseId}`, {
+        const response = await this.makeAuthedRequest<any>(`/expenses/${expenseId}`, {
             method: 'GET',
         });
+        
+        // Handle different response structures - return the data field if it exists
+        return response.data || response;
     }
 
     async createExpense(expenseData: {
@@ -131,10 +134,13 @@ class ExpensesService {
     }
 
     async updateExpense(expenseId: string, expenseData: Partial<Expense>): Promise<Expense> {
-        return this.makeAuthedRequest<Expense>(`/expenses/${expenseId}`, {
+        const response = await this.makeAuthedRequest<any>(`/expenses/${expenseId}`, {
             method: 'PUT',
             body: JSON.stringify(expenseData),
         });
+        
+        // Handle different response structures - return the data field if it exists
+        return response.data || response;
     }
 
     async deleteExpense(expenseId: string): Promise<void> {
