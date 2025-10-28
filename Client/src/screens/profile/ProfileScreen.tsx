@@ -16,8 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { authStorage } from '../../services/authStorage';
 import { profileService, UserProfile, ChangePasswordRequest } from '../../services/profile';
-import SectionCard from '../../components/SectionCard';
+
 import colors from '../../theme/colors';
+import { getProfileImageUri } from '../../utils/defaultImage';
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -295,7 +296,9 @@ const ProfileScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Details Section */}
-        <SectionCard title="Profile Details">
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile Details</Text>
+          
           <View style={styles.profileHeader}>
             {/* Left side - Profile Image */}
             <View style={styles.profileImageSection}>
@@ -304,7 +307,7 @@ const ProfileScreen: React.FC = () => {
                   source={{
                     uri: isEditing && editForm.profileImage
                       ? editForm.profileImage
-                      : profile?.profileImage || 'https://placehold.co/80x80'
+                      : getProfileImageUri(profile?.profileImage, 80)
                   }}
                   style={styles.profileImage}
                 />
@@ -389,10 +392,12 @@ const ProfileScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           )}
-        </SectionCard>
+        </View>
 
         {/* Account Actions Section */}
-        <SectionCard title="Account Actions">
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account Actions</Text>
+          
           <TouchableOpacity
             style={styles.accountAction}
             onPress={() => setShowChangePassword(!showChangePassword)}
@@ -480,7 +485,7 @@ const ProfileScreen: React.FC = () => {
             <Text style={[styles.accountActionText, styles.dangerText]}>Logout</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
           </TouchableOpacity>
-        </SectionCard>
+        </View>
       </ScrollView>
     </View>
   );
@@ -526,9 +531,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   },
   content: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
     paddingBottom: 20,
+  },
+  section: {
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 16,
   },
   profileHeader: {
     flexDirection: 'row',

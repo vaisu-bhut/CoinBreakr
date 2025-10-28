@@ -15,6 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
+import { getProfileImageUri } from '../../utils/defaultImage';
 import { Friend, friendsService, Group } from '../../services/friends';
 import { expensesService } from '../../services/expenses';
 import { useAuth } from '../../hooks/useAuth';
@@ -373,7 +374,7 @@ const AddExpenseScreen: React.FC = () => {
             <StatusBar backgroundColor={colors.background.body} barStyle="dark-content" />
 
             {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top - 15 }]}>
+            <View style={[styles.header, { paddingTop: insets.top - 16 }]}>
                 <TouchableOpacity
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
@@ -411,7 +412,7 @@ const AddExpenseScreen: React.FC = () => {
                             .map((participant) => (
                                 <View key={participant._id} style={styles.participantChip}>
                                     <Image
-                                        source={{ uri: participant.profileImage || 'https://placehold.co/24x24' }}
+                                        source={{ uri: getProfileImageUri(participant.profileImage, 24) }}
                                         style={styles.participantAvatar}
                                     />
                                     <Text style={styles.participantName}>{participant.name}</Text>
@@ -471,7 +472,7 @@ const AddExpenseScreen: React.FC = () => {
                                             onPress={() => addParticipant(friend)}
                                         >
                                             <Image
-                                                source={{ uri: friend.profileImage || 'https://placehold.co/40x40' }}
+                                                source={{ uri: getProfileImageUri(friend.profileImage, 40) }}
                                                 style={styles.friendAvatar}
                                             />
                                             <View style={styles.friendInfo}>
@@ -559,7 +560,7 @@ const AddExpenseScreen: React.FC = () => {
                                         }}
                                     >
                                         <Image
-                                            source={{ uri: participant.profileImage || 'https://placehold.co/24x24' }}
+                                            source={{ uri: getProfileImageUri(participant.profileImage, 24) }}
                                             style={styles.optionAvatar}
                                         />
                                         <Text style={styles.optionText}>{participant.name}</Text>
@@ -618,7 +619,7 @@ const AddExpenseScreen: React.FC = () => {
                                     <View key={split.userId} style={styles.splitItem}>
                                         <View style={styles.splitParticipant}>
                                             <Image
-                                                source={{ uri: participant.profileImage || 'https://placehold.co/32x32' }}
+                                                source={{ uri: getProfileImageUri(participant.profileImage, 32) }}
                                                 style={styles.splitAvatar}
                                             />
                                             <Text style={styles.splitName}>{participant.name}</Text>

@@ -5,8 +5,6 @@ resource "google_dns_managed_zone" "beleno_zone" {
   description = "DNS zone for beleno.clestiq.com - ${var.environment} environment"
 
   depends_on = [google_project_service.dns_api]
-
-
 }
 
 # A record for API subdomain (main environment)
@@ -41,7 +39,7 @@ output "dns_nameservers" {
 output "dns_records" {
   description = "DNS records created"
   value = {
-    api_record     = var.environment == "main" ? "api.beleno.clestiq.com -> ${google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip}:3000" : "Not created in this environment"
+    api_record     = var.environment == "main" ? "http://api.beleno.clestiq.com:3000/v1 -> ${google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip}:3000/v1" : "Not created in this environment"
     staging_record = var.environment == "staging" ? "staging.beleno.clestiq.com -> ${google_compute_instance.vm_instance.network_interface[0].access_config[0].nat_ip}:3000" : "Not created in this environment"
   }
 }
