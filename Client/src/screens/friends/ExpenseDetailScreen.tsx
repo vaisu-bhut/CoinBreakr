@@ -628,7 +628,10 @@ const ExpenseDetailScreen: React.FC = () => {
           <View style={styles.splitContainer}>
             {isEditing ? (
               editForm.splitWith.map((split, index) => (
-                <View key={split.userId} style={styles.splitRow}>
+                <View key={split.userId} style={[
+                  styles.splitRow,
+                  index === editForm.splitWith.length - 1 && styles.lastSplitRow
+                ]}>
                   <View style={styles.splitUser}>
                     <Image
                       source={{ uri: getProfileImageUri(split.userImage, 32) }}
@@ -652,7 +655,10 @@ const ExpenseDetailScreen: React.FC = () => {
               ))
             ) : (
               (expense.splitWith || []).map((split, index) => (
-                <View key={index} style={styles.splitRow}>
+                <View key={index} style={[
+                  styles.splitRow,
+                  index === (expense.splitWith || []).length - 1 && styles.lastSplitRow
+                ]}>
                   <View style={styles.splitUser}>
                     <Image
                       source={{ uri: getProfileImageUri(split.user?.profileImage, 32) }}
@@ -679,7 +685,7 @@ const ExpenseDetailScreen: React.FC = () => {
 
         {/* Your Share */}
         {userSplit && (
-          <View style={styles.section}>
+          <View style={styles.lastSection}>
             <Text style={styles.sectionTitle}>Your Share</Text>
             <View style={styles.userShareContainer}>
               <View style={styles.userShareRow}>
@@ -790,7 +796,7 @@ const ExpenseDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.body,
+    backgroundColor: colors.background.primary,
   },
   centered: {
     flex: 1,
@@ -847,9 +853,10 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: colors.background.primary,
-    marginTop: 16,
     paddingHorizontal: 24,
     paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
   },
   expenseHeader: {
     flexDirection: 'row',
@@ -960,9 +967,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   paymentInfo: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    padding: 16,
+    paddingVertical: 8,
   },
   paymentRow: {
     flexDirection: 'row',
@@ -1074,9 +1079,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   splitContainer: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    padding: 16,
+    paddingVertical: 8,
   },
   splitRow: {
     flexDirection: 'row',
@@ -1085,6 +1088,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastSplitRow: {
+    borderBottomWidth: 0,
   },
   splitUser: {
     flexDirection: 'row',
@@ -1145,10 +1151,13 @@ const styles = StyleSheet.create({
     minWidth: 60,
     textAlign: 'center',
   },
+  lastSection: {
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
   userShareContainer: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    padding: 16,
+    paddingVertical: 8,
   },
   userShareRow: {
     flexDirection: 'row',

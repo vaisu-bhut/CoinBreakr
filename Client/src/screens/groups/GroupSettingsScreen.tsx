@@ -36,7 +36,7 @@ interface SearchableUser {
 const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const { group: initialGroup } = route.params as { group: Group };
-  
+
   // State
   const [group, setGroup] = useState<Group>(initialGroup);
   const [isEditing, setIsEditing] = useState(false);
@@ -44,13 +44,13 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [expandedMembers, setExpandedMembers] = useState(false);
   const [showAddMemberSection, setShowAddMemberSection] = useState(false);
-  
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchableUser[]>([]);
   const [allUsers, setAllUsers] = useState<SearchableUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  
+
   // Edit form state
   const [editName, setEditName] = useState(group.name);
   const [editDescription, setEditDescription] = useState(group.description || '');
@@ -184,11 +184,11 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
         name: editName.trim(),
         description: editDescription.trim() || undefined,
       });
-      
+
       // Update the group data in place
       setGroup(updatedGroup);
       setIsEditing(false);
-      
+
       // Show success message
       Alert.alert('Success', 'Group details updated successfully!');
     } catch (error: any) {
@@ -233,13 +233,13 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
     try {
       setLoading(true);
       const updatedGroup = await groupsService.removeMemberFromGroup(group._id, memberId);
-      
+
       if (memberId === currentUserId) {
         // User left the group, navigate back
         navigation.navigate('GroupsList', { refresh: true });
         return;
       }
-      
+
       setGroup(updatedGroup);
       loadUsers(); // Refresh available users
     } catch (error: any) {
@@ -254,11 +254,11 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
       setLoading(true);
       const updatedGroup = await groupsService.addMemberToGroup(group._id, [user._id]);
       setGroup(updatedGroup);
-      
+
       // Remove the added user from search results
       setAllUsers(allUsers.filter(u => u._id !== user._id));
       setSearchResults(searchResults.filter(u => u._id !== user._id));
-      
+
       Alert.alert('Success', `${user.name} added to group`);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to add member');
@@ -273,9 +273,9 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
       'Are you sure you want to delete this group? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive', 
+        {
+          text: 'Delete',
+          style: 'destructive',
           onPress: async () => {
             try {
               setLoading(true);
@@ -329,10 +329,10 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
             {loading ? (
               <ActivityIndicator size="small" color={colors.primary[600]} />
             ) : (
-              <Ionicons 
-                name={isEditing ? "checkmark" : "create-outline"} 
-                size={24} 
-                color={colors.primary[600]} 
+              <Ionicons
+                name={isEditing ? "checkmark" : "create-outline"}
+                size={24}
+                color={colors.primary[600]}
               />
             )}
           </TouchableOpacity>
@@ -390,10 +390,10 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
           <View style={styles.creatorInfo}>
             <Text style={styles.sectionLabel}>Created by</Text>
             <Text style={styles.creatorText}>
-              {isCreator 
-                ? 'You' 
-                : typeof group.createdBy === 'string' 
-                  ? 'Group Creator' 
+              {isCreator
+                ? 'You'
+                : typeof group.createdBy === 'string'
+                  ? 'Group Creator'
                   : group.createdBy.name
               }
             </Text>
@@ -411,10 +411,10 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
               style={styles.expandButton}
               onPress={() => setExpandedMembers(!expandedMembers)}
             >
-              <Ionicons 
-                name={expandedMembers ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color={colors.text.secondary} 
+              <Ionicons
+                name={expandedMembers ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={colors.text.secondary}
               />
             </TouchableOpacity>
           </View>
@@ -427,10 +427,10 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
             >
               <Ionicons name="person-add-outline" size={20} color={colors.primary[600]} />
               <Text style={styles.addMemberButtonText}>Add Members</Text>
-              <Ionicons 
-                name={showAddMemberSection ? "chevron-up" : "chevron-down"} 
-                size={16} 
-                color={colors.text.tertiary} 
+              <Ionicons
+                name={showAddMemberSection ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={colors.text.tertiary}
               />
             </TouchableOpacity>
           )}
@@ -568,7 +568,10 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
           {expandedMembers && (
             <View style={styles.membersList}>
               {group.members.map((member, index) => (
-                <View key={member._id || index} style={styles.memberItem}>
+                <View key={member._id || index} style={[
+                  styles.memberItem,
+                  index === group.members.length - 1 && styles.lastMemberItem
+                ]}>
                   <Image
                     source={{ uri: 'https://placehold.co/40x40' }}
                     style={styles.memberAvatar}
@@ -605,11 +608,11 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
         </View>
 
         {/* Actions Section */}
-        <View style={styles.section}>
+        <View style={styles.lastSection}>
           <Text style={styles.sectionTitle}>Actions</Text>
 
           {/* Creator can delete group */}
-          {isCreator && (
+          {(isCreator || isAdmin) && (
             <TouchableOpacity
               style={[styles.actionButton, styles.dangerButton]}
               onPress={handleDeleteGroup}
@@ -621,7 +624,7 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
           )}
 
           {/* Non-creators can leave group */}
-          {!isCreator && (
+          {
             <TouchableOpacity
               style={[styles.actionButton, styles.dangerButton]}
               onPress={() => handleRemoveMember(currentUserId!, 'You')}
@@ -630,11 +633,9 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
               <Text style={[styles.actionButtonText, styles.dangerText]}>Leave Group</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
             </TouchableOpacity>
-          )}
+          }
         </View>
       </ScrollView>
-
-
     </SafeAreaView>
   );
 };
@@ -678,6 +679,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -772,6 +777,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastMemberItem: {
+    borderBottomWidth: 0,
   },
   memberAvatar: {
     width: 40,

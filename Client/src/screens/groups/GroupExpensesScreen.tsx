@@ -126,6 +126,7 @@ const GroupExpensesScreen: React.FC = () => {
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -163,7 +164,7 @@ const GroupExpensesScreen: React.FC = () => {
         </View>
 
         {/* Expenses Section */}
-        <View style={styles.section}>
+        <View style={styles.expensesSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Group Expenses</Text>
             <TouchableOpacity
@@ -176,17 +177,20 @@ const GroupExpensesScreen: React.FC = () => {
           </View>
 
           {expenses.length > 0 ? (
-            expenses.map((expense) => (
+            expenses.map((expense, index) => (
               <TouchableOpacity
                 key={expense._id}
-                style={styles.expenseItem}
+                style={[
+                  styles.expenseItem,
+                  index === expenses.length - 1 && styles.lastExpenseItem
+                ]}
                 onPress={() => navigateToExpenseDetail(expense)}
               >
                 <View style={styles.expenseIcon}>
-                  <Ionicons 
-                    name="receipt-outline" 
-                    size={20} 
-                    color={colors.primary[600]} 
+                  <Ionicons
+                    name="receipt-outline"
+                    size={20}
+                    color={colors.primary[600]}
                   />
                 </View>
                 <View style={styles.expenseInfo}>
@@ -263,11 +267,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   section: {
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  expensesSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    flex: 1,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -358,6 +370,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastExpenseItem: {
+    borderBottomWidth: 0,
   },
   expenseIcon: {
     width: 40,
