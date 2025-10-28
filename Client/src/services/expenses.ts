@@ -28,6 +28,7 @@ export interface Expense {
     splitWith: SplitWith[];
     isSettled: boolean;
     groupId?: string; // Group ID if this is a group expense
+    group?: { _id: string; name: string }; // Populated group data
 }
 
 export interface ExpensesResponse {

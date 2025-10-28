@@ -369,7 +369,14 @@ const FriendExpenseScreen: React.FC = () => {
                         />
                       </View>
                       <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseTitle}>{expense.title}</Text>
+                        <View style={styles.expenseTitleContainer}>
+                          <Text style={styles.expenseTitle}>{expense.title}</Text>
+                          {expense.group && (
+                            <View style={styles.groupBadge}>
+                              <Ionicons name="people" size={14} color="#FFFFFF" />
+                            </View>
+                          )}
+                        </View>
                         <Text style={styles.expenseDate}>
                           {formatDate(expense.date)} • Paid by {expense.paidBy.name}
                         </Text>
@@ -556,11 +563,25 @@ const styles = StyleSheet.create({
   expenseInfo: {
     flex: 1,
   },
+  expenseTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   expenseTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 4,
+    flex: 1,
+  },
+  groupBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[600],
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   expenseDate: {
     fontSize: 12,

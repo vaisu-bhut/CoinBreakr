@@ -446,7 +446,15 @@ const ExpenseDetailScreen: React.FC = () => {
                   />
                 </View>
               ) : (
-                <Text style={styles.expenseTitle}>{expense.title}</Text>
+                <View>
+                  <Text style={styles.expenseTitle}>{expense.title}</Text>
+                  {expense.group && (
+                    <View style={styles.groupIndicator}>
+                      <Ionicons name="people" size={14} color={colors.primary[600]} />
+                      <Text style={styles.groupIndicatorText}>Group: {expense.group.name}</Text>
+                    </View>
+                  )}
+                </View>
               )}
 
               {isEditing ? (
@@ -929,6 +937,19 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 8,
   },
+  groupIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  groupIndicatorText: {
+    fontSize: 14,
+    color: colors.primary[600],
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+
   expenseAmount: {
     fontSize: 32,
     fontWeight: '700',
