@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-    DOMAIN_URL: 'http://api.beleno.clestiq.com',
+    DOMAIN_URL: 'http://api.splitlyr.clestiq.com',
     FALLBACK_IP: '35.188.9.86', 
     PORT: 3000,
     API_VERSION: 'v1',
