@@ -31,11 +31,18 @@
     },
     "extra": {
       "eas": {
-        "projectId": "e9c29b7e-90b7-42b3-8936-787ddf5617ab"
+        "projectId": "72ecd050-2fdc-49cb-b05c-05c6722114a8"
       }
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "owner": "vasubhut157",
+    "ios": {
+      "bundleIdentifier": "com.clestiq.splitlyr.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
   }
 }
