@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
+import { getProfileImageUri } from '../../utils/defaultImage';
 import { groupsService, CreateGroupData } from '../../services/groups';
 import { friendsService } from '../../services/friends';
 
@@ -198,7 +199,7 @@ const CreateGroupScreen: React.FC = () => {
 
       console.log('✅ Sending group data to server:', groupData);
 
-      await groupsService.createGroup(groupData);
+      const createdGroup = await groupsService.createGroup(groupData);
 
       console.log('✅ Group created successfully');
       Alert.alert(
@@ -208,7 +209,11 @@ const CreateGroupScreen: React.FC = () => {
           {
             text: 'OK',
             onPress: () => {
-              navigation.navigate('Groups', { refresh: true });
+              // Navigate to the specific group screen instead of groups list
+              navigation.navigate('GroupExpenses', { 
+                group: createdGroup,
+                groupId: createdGroup._id 
+              });
             },
           },
         ]
@@ -307,7 +312,7 @@ const CreateGroupScreen: React.FC = () => {
               {selectedMembers.map((member) => (
                 <View key={member._id} style={styles.selectedMemberItem}>
                   <Image
-                    source={{ uri: member.profileImage || 'https://placehold.co/40x40' }}
+                    source={{ uri: getProfileImageUri(member.profileImage, 40) }}
                     style={styles.selectedMemberAvatar}
                   />
                   <Text style={styles.selectedMemberName} numberOfLines={1}>
@@ -396,7 +401,7 @@ const CreateGroupScreen: React.FC = () => {
                               onPress={() => toggleMemberSelection(user)}
                             >
                               <Image
-                                source={{ uri: user.profileImage || 'https://placehold.co/40x40' }}
+                                source={{ uri: getProfileImageUri(user.profileImage, 40) }}
                                 style={styles.userAvatar}
                               />
                               <View style={styles.userInfo}>
@@ -434,7 +439,7 @@ const CreateGroupScreen: React.FC = () => {
                               onPress={() => toggleMemberSelection(user)}
                             >
                               <Image
-                                source={{ uri: user.profileImage || 'https://placehold.co/40x40' }}
+                                source={{ uri: getProfileImageUri(user.profileImage, 40) }}
                                 style={styles.userAvatar}
                               />
                               <View style={styles.userInfo}>

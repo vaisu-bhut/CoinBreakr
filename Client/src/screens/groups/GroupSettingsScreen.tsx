@@ -11,13 +11,12 @@ import {
   Image,
   StatusBar,
 } from 'react-native';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
 import { groupsService, Group } from '../../services/groups';
-import { friendsService } from '../../services/friends';
 import { authStorage } from '../../services/authStorage';
 
 type GroupSettingsScreenProps = {
@@ -25,84 +24,51 @@ type GroupSettingsScreenProps = {
   route: RouteProp<any>;
 };
 
-interface SearchableUser {
-  _id: string;
-  name: string;
-  email: string;
-  profileImage?: string;
-  isFriend: boolean;
-}
-
 const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
   const { group: initialGroup } = route.params as { group: Group };
-  
+
   // State
   const [group, setGroup] = useState<Group>(initialGroup);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [expandedMembers, setExpandedMembers] = useState(false);
-  const [showAddMemberSection, setShowAddMemberSection] = useState(false);
-  
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchableUser[]>([]);
-  const [allUsers, setAllUsers] = useState<SearchableUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  
+
   // Edit form state
   const [editName, setEditName] = useState(group.name);
   const [editDescription, setEditDescription] = useState(group.description || '');
 
   useEffect(() => {
     getCurrentUser();
-    loadUsers();
+    loadGroupWithMembers();
   }, []);
 
-  useEffect(() => {
-    const searchUsers = async () => {
-      const query = searchQuery.trim();
-      const words = query.split(/\s+/).filter(word => word.length > 0);
-
-      if (query) {
-        // Always show friends when searching
-        const friendResults = allUsers.filter(user =>
-          user.isFriend && (
-            user.name.toLowerCase().includes(query.toLowerCase()) ||
-            user.email.toLowerCase().includes(query.toLowerCase())
-          )
-        );
-
-        // Search app users only if search has more than 2 words
-        let appUserResults: SearchableUser[] = [];
-        if (words.length > 2) {
-          try {
-            const appUsers = await friendsService.searchAppUsers(query);
-            appUserResults = appUsers.map(user => ({
-              _id: user._id,
-              name: user.name,
-              email: user.email,
-              profileImage: user.profileImage,
-              isFriend: false,
-            }));
-          } catch (error) {
-            // Continue with empty app user results
-          }
-        }
-
-        setSearchResults([...friendResults, ...appUserResults]);
-      } else {
-        // Show only friends when not searching
-        const friendsOnly = allUsers.filter(user => user.isFriend);
-        setSearchResults(friendsOnly);
-      }
-    };
-
-    if (showAddMemberSection) {
-      searchUsers();
+  const loadGroupWithMembers = async () => {
+    try {
+      const populatedGroup = await groupsService.getGroupByIdWithMembers(group._id);
+      setGroup(populatedGroup);
+    } catch (error) {
+      console.error('Error loading group with members:', error);
+      // Keep the original group data if population fails
     }
-  }, [searchQuery, allUsers, showAddMemberSection]);
+  };
+
+  // Refresh group data when returning from AddGroupMembers screen
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshGroup = async () => {
+        try {
+          const updatedGroup = await groupsService.getGroupByIdWithMembers(group._id);
+          setGroup(updatedGroup);
+        } catch (error) {
+          console.error('Error refreshing group:', error);
+        }
+      };
+
+      refreshGroup();
+    }, [group._id])
+  );
 
   const getCurrentUser = async () => {
     try {
@@ -116,41 +82,13 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
     }
   };
 
-  const loadUsers = async () => {
-    try {
-      setLoadingUsers(true);
 
-      // Get friends
-      const friendsResponse = await friendsService.getFriends();
-      const friends = friendsResponse.friends || [];
-
-      // Filter out current members
-      const currentMemberIds = group.members.map(member => member.user);
-      const availableFriends = friends.filter(
-        friend => !currentMemberIds.includes(friend._id)
-      );
-
-      // Convert friends to searchable users
-      const friendUsers: SearchableUser[] = availableFriends.map(friend => ({
-        _id: friend._id,
-        name: friend.name,
-        email: friend.email,
-        profileImage: friend.profileImage,
-        isFriend: true,
-      }));
-
-      setAllUsers(friendUsers);
-      setSearchResults(friendUsers);
-    } catch (error) {
-      console.error('Error loading users:', error);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
 
   const createdById = typeof group.createdBy === 'string' ? group.createdBy : group.createdBy._id;
   const isCreator = currentUserId === createdById;
-  const currentMember = group.members.find(member => member.user === currentUserId);
+  const currentMember = group.members.find(member => 
+    (typeof member.user === 'string' ? member.user : member.user._id) === currentUserId
+  );
   const isAdmin = currentMember?.role === 'admin' || isCreator;
 
   // Debug logging
@@ -184,11 +122,11 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
         name: editName.trim(),
         description: editDescription.trim() || undefined,
       });
-      
+
       // Update the group data in place
       setGroup(updatedGroup);
       setIsEditing(false);
-      
+
       // Show success message
       Alert.alert('Success', 'Group details updated successfully!');
     } catch (error: any) {
@@ -233,15 +171,14 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
     try {
       setLoading(true);
       const updatedGroup = await groupsService.removeMemberFromGroup(group._id, memberId);
-      
+
       if (memberId === currentUserId) {
         // User left the group, navigate back
         navigation.navigate('GroupsList', { refresh: true });
         return;
       }
-      
+
       setGroup(updatedGroup);
-      loadUsers(); // Refresh available users
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to remove member');
     } finally {
@@ -249,23 +186,7 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
     }
   };
 
-  const handleAddMember = async (user: SearchableUser) => {
-    try {
-      setLoading(true);
-      const updatedGroup = await groupsService.addMemberToGroup(group._id, [user._id]);
-      setGroup(updatedGroup);
-      
-      // Remove the added user from search results
-      setAllUsers(allUsers.filter(u => u._id !== user._id));
-      setSearchResults(searchResults.filter(u => u._id !== user._id));
-      
-      Alert.alert('Success', `${user.name} added to group`);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to add member');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleDeleteGroup = () => {
     Alert.alert(
@@ -273,9 +194,9 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
       'Are you sure you want to delete this group? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive', 
+        {
+          text: 'Delete',
+          style: 'destructive',
           onPress: async () => {
             try {
               setLoading(true);
@@ -292,12 +213,7 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
     );
   };
 
-  const toggleAddMemberSection = () => {
-    setShowAddMemberSection(!showAddMemberSection);
-    if (!showAddMemberSection) {
-      setSearchQuery('');
-    }
-  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -329,10 +245,10 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
             {loading ? (
               <ActivityIndicator size="small" color={colors.primary[600]} />
             ) : (
-              <Ionicons 
-                name={isEditing ? "checkmark" : "create-outline"} 
-                size={24} 
-                color={colors.primary[600]} 
+              <Ionicons
+                name={isEditing ? "checkmark" : "create-outline"}
+                size={24}
+                color={colors.primary[600]}
               />
             )}
           </TouchableOpacity>
@@ -390,10 +306,10 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
           <View style={styles.creatorInfo}>
             <Text style={styles.sectionLabel}>Created by</Text>
             <Text style={styles.creatorText}>
-              {isCreator 
-                ? 'You' 
-                : typeof group.createdBy === 'string' 
-                  ? 'Group Creator' 
+              {isCreator
+                ? 'You'
+                : typeof group.createdBy === 'string'
+                  ? 'Group Creator'
                   : group.createdBy.name
               }
             </Text>
@@ -405,211 +321,99 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
 
         {/* Members Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => setExpandedMembers(!expandedMembers)}
+          >
             <Text style={styles.sectionTitle}>Members ({group.members.length})</Text>
-            <TouchableOpacity
-              style={styles.expandButton}
-              onPress={() => setExpandedMembers(!expandedMembers)}
-            >
-              <Ionicons 
-                name={expandedMembers ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color={colors.text.secondary} 
-              />
-            </TouchableOpacity>
-          </View>
+            <Ionicons
+              name={expandedMembers ? "chevron-up" : "chevron-down"}
+              size={20}
+              color={colors.text.secondary}
+            />
+          </TouchableOpacity>
 
-          {/* Add Members Button - Only for Admins */}
-          {isAdmin && (
-            <TouchableOpacity
-              style={styles.addMemberButton}
-              onPress={toggleAddMemberSection}
-            >
-              <Ionicons name="person-add-outline" size={20} color={colors.primary[600]} />
-              <Text style={styles.addMemberButtonText}>Add Members</Text>
-              <Ionicons 
-                name={showAddMemberSection ? "chevron-up" : "chevron-down"} 
-                size={16} 
-                color={colors.text.tertiary} 
-              />
-            </TouchableOpacity>
-          )}
-
-          {/* Add Members Search - Only for Admins */}
-          {isAdmin && showAddMemberSection && (
-            <View style={styles.addMemberContainer}>
-              {/* Search Input */}
-              <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color={colors.text.tertiary} style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="Search friends or type 3+ words for app users..."
-                  placeholderTextColor={colors.text.tertiary}
-                />
-                {searchQuery && (
-                  <TouchableOpacity
-                    style={styles.clearSearch}
-                    onPress={() => setSearchQuery('')}
-                  >
-                    <Ionicons name="close-circle" size={20} color={colors.text.tertiary} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Search Results */}
-              {loadingUsers ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={colors.primary[600]} />
-                  <Text style={styles.loadingText}>Loading users...</Text>
-                </View>
-              ) : (
-                <View style={styles.searchResults}>
-                  {(() => {
-                    const query = searchQuery.trim();
-                    const words = query.split(/\s+/).filter(word => word.length > 0);
-
-                    const friendResults = searchResults.filter(user => user.isFriend);
-                    const appUserResults = searchResults.filter(user => !user.isFriend);
-
-                    const showAppUsers = !query || words.length > 2;
-
-                    return (
-                      <>
-                        {/* Friends Section */}
-                        {friendResults.length > 0 && (
-                          <>
-                            <Text style={styles.resultsLabel}>Friends</Text>
-                            {friendResults.map((user) => (
-                              <TouchableOpacity
-                                key={user._id}
-                                style={styles.userItem}
-                                onPress={() => handleAddMember(user)}
-                                disabled={loading}
-                              >
-                                <Image
-                                  source={{ uri: user.profileImage || 'https://placehold.co/40x40' }}
-                                  style={styles.userAvatar}
-                                />
-                                <View style={styles.userInfo}>
-                                  <Text style={styles.userName}>{user.name}</Text>
-                                  <Text style={styles.userEmail}>{user.email}</Text>
-                                  <Text style={styles.friendBadge}>Friend</Text>
-                                </View>
-                                <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} />
-                              </TouchableOpacity>
-                            ))}
-                          </>
-                        )}
-
-                        {/* App Users Section */}
-                        {showAppUsers && appUserResults.length > 0 && (
-                          <>
-                            <Text style={styles.resultsLabel}>App Users</Text>
-                            <Text style={styles.searchHint}>Will be added as friends automatically</Text>
-                            {appUserResults.map((user) => (
-                              <TouchableOpacity
-                                key={user._id}
-                                style={styles.userItem}
-                                onPress={() => handleAddMember(user)}
-                                disabled={loading}
-                              >
-                                <Image
-                                  source={{ uri: user.profileImage || 'https://placehold.co/40x40' }}
-                                  style={styles.userAvatar}
-                                />
-                                <View style={styles.userInfo}>
-                                  <Text style={styles.userName}>{user.name}</Text>
-                                  <Text style={styles.userEmail}>{user.email}</Text>
-                                  <Text style={styles.appUserBadge}>Will be added as friend</Text>
-                                </View>
-                                <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} />
-                              </TouchableOpacity>
-                            ))}
-                          </>
-                        )}
-
-                        {/* Empty State */}
-                        {searchResults.length === 0 && (
-                          <View style={styles.emptyResults}>
-                            {query && words.length <= 2 ? (
-                              <>
-                                <Text style={styles.emptyResultsText}>No friends found</Text>
-                                <Text style={styles.emptyResultsHint}>
-                                  Type more than 2 words to search app users
-                                </Text>
-                              </>
-                            ) : (
-                              <Text style={styles.emptyResultsText}>No users found</Text>
-                            )}
-                          </View>
-                        )}
-
-                        {/* Search Hint */}
-                        {!query && (
-                          <View style={styles.searchHintContainer}>
-                            <Text style={styles.searchHintText}>
-                              • Friends appear automatically{'\n'}
-                              • Type more than 2 words to search app users{'\n'}
-                              • App users will be automatically added as friends
-                            </Text>
-                          </View>
-                        )}
-                      </>
-                    );
-                  })()}
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Members List */}
+          {/* Expanded Members Content */}
           {expandedMembers && (
-            <View style={styles.membersList}>
-              {group.members.map((member, index) => (
-                <View key={member._id || index} style={styles.memberItem}>
-                  <Image
-                    source={{ uri: 'https://placehold.co/40x40' }}
-                    style={styles.memberAvatar}
-                  />
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>
-                      {member.user === currentUserId ? 'You' : `Member ${index + 1}`}
-                    </Text>
-                    <Text style={styles.memberRole}>{member.role}</Text>
-                    <Text style={styles.joinedDate}>
-                      Joined {new Date(member.joinedAt).toLocaleDateString()}
-                    </Text>
+            <View style={styles.expandedContent}>
+              {/* Add Members Button - Only for Admins */}
+              {isAdmin && (
+                <TouchableOpacity
+                  style={styles.addMemberButton}
+                  onPress={() => navigation.navigate('AddGroupMembers', {
+                    groupId: group._id,
+                    currentMembers: group.members.map(m => typeof m.user === 'string' ? m.user : m.user._id)
+                  })}
+                >
+                  <Ionicons name="person-add-outline" size={20} color={colors.primary[600]} />
+                  <Text style={styles.addMemberButtonText}>Add Members</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                </TouchableOpacity>
+              )}
+
+              {/* Current Members List */}
+              <View style={styles.membersList}>
+                {group.members.map((member, index) => (
+                  <View key={member._id || index} style={[
+                    styles.memberItem,
+                    index === group.members.length - 1 && styles.lastMemberItem
+                  ]}>
+                    <Image
+                      source={{ 
+                        uri: typeof member.user === 'object' && member.user.profileImage 
+                          ? member.user.profileImage 
+                          : 'https://placehold.co/40x40' 
+                      }}
+                      style={styles.memberAvatar}
+                    />
+                    <View style={styles.memberInfo}>
+                      <Text style={styles.memberName}>
+                        {(typeof member.user === 'string' ? member.user : member.user._id) === currentUserId 
+                          ? 'You' 
+                          : typeof member.user === 'object' 
+                            ? member.user.name 
+                            : `Member ${index + 1}`}
+                      </Text>
+                      <Text style={styles.memberRole}>{member.role}</Text>
+                      <Text style={styles.joinedDate}>
+                        Joined {new Date(member.joinedAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    {isAdmin && (typeof member.user === 'string' ? member.user : member.user._id) !== currentUserId && (
+                      <TouchableOpacity
+                        style={styles.removeMemberButton}
+                        onPress={() => handleRemoveMember(
+                          typeof member.user === 'string' ? member.user : member.user._id, 
+                          typeof member.user === 'object' ? member.user.name : `Member ${index + 1}`
+                        )}
+                      >
+                        <Ionicons name="remove-circle-outline" size={20} color={colors.error} />
+                      </TouchableOpacity>
+                    )}
+                    {(typeof member.user === 'string' ? member.user : member.user._id) === currentUserId && !isCreator && (
+                      <TouchableOpacity
+                        style={styles.leaveButton}
+                        onPress={() => handleRemoveMember(
+                          typeof member.user === 'string' ? member.user : member.user._id, 
+                          'You'
+                        )}
+                      >
+                        <Text style={styles.leaveButtonText}>Leave</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                  {isAdmin && member.user !== currentUserId && (
-                    <TouchableOpacity
-                      style={styles.removeMemberButton}
-                      onPress={() => handleRemoveMember(member.user, `Member ${index + 1}`)}
-                    >
-                      <Ionicons name="remove-circle-outline" size={20} color={colors.error} />
-                    </TouchableOpacity>
-                  )}
-                  {member.user === currentUserId && !isCreator && (
-                    <TouchableOpacity
-                      style={styles.leaveButton}
-                      onPress={() => handleRemoveMember(member.user, 'You')}
-                    >
-                      <Text style={styles.leaveButtonText}>Leave</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
           )}
         </View>
 
         {/* Actions Section */}
-        <View style={styles.section}>
+        <View style={styles.lastSection}>
           <Text style={styles.sectionTitle}>Actions</Text>
 
           {/* Creator can delete group */}
-          {isCreator && (
+          {(isCreator || isAdmin) && (
             <TouchableOpacity
               style={[styles.actionButton, styles.dangerButton]}
               onPress={handleDeleteGroup}
@@ -621,7 +425,7 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
           )}
 
           {/* Non-creators can leave group */}
-          {!isCreator && (
+          {
             <TouchableOpacity
               style={[styles.actionButton, styles.dangerButton]}
               onPress={() => handleRemoveMember(currentUserId!, 'You')}
@@ -630,11 +434,9 @@ const GroupSettingsScreen: React.FC<GroupSettingsScreenProps> = ({ navigation, r
               <Text style={[styles.actionButtonText, styles.dangerText]}>Leave Group</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
             </TouchableOpacity>
-          )}
+          }
         </View>
       </ScrollView>
-
-
     </SafeAreaView>
   );
 };
@@ -678,6 +480,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -750,19 +556,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  expandedContent: {
+    marginTop: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text.primary,
   },
-  expandButton: {
-    padding: 4,
-  },
-  toggleButton: {
-    padding: 4,
-  },
+
   membersList: {
     marginTop: 8,
   },
@@ -772,6 +576,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastMemberItem: {
+    borderBottomWidth: 0,
   },
   memberAvatar: {
     width: 40,
@@ -809,7 +616,7 @@ const styles = StyleSheet.create({
   },
   leaveButtonText: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: colors.background.primary,
     fontWeight: '600',
   },
   actionButton: {
@@ -835,13 +642,11 @@ const styles = StyleSheet.create({
   addMemberButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 4,
-    marginTop: 8,
-    marginBottom: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border.light,
-    paddingTop: 16,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
   },
   addMemberButtonText: {
     fontSize: 16,
@@ -850,124 +655,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
-  addMemberContainer: {
-    marginTop: 16,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border.medium,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: colors.background.primary,
-  },
-  searchIcon: {
-    marginRight: 12,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text.primary,
-  },
-  clearSearch: {
-    padding: 4,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  loadingText: {
-    marginLeft: 12,
-    fontSize: 14,
-    color: colors.text.tertiary,
-  },
-  searchResults: {
-    marginTop: 8,
-  },
-  resultsLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  searchHint: {
-    fontSize: 12,
-    color: colors.text.tertiary,
-    fontStyle: 'italic',
-    marginBottom: 8,
-  },
-  userItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderRadius: 12,
-  },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: colors.text.tertiary,
-    marginBottom: 2,
-  },
-  friendBadge: {
-    fontSize: 12,
-    color: colors.primary[600],
-    fontWeight: '500',
-  },
-  appUserBadge: {
-    fontSize: 12,
-    color: colors.warning,
-    fontWeight: '500',
-  },
-  emptyResults: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyResultsText: {
-    fontSize: 16,
-    color: colors.text.tertiary,
-    textAlign: 'center',
-  },
-  emptyResultsHint: {
-    fontSize: 14,
-    color: colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  searchHintContainer: {
-    backgroundColor: colors.background.tertiary,
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 16,
-  },
-  searchHintText: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    lineHeight: 20,
-  },
+
 });
 
 export default GroupSettingsScreen;

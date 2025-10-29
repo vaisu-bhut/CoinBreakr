@@ -186,7 +186,7 @@ const ReviewFriendsScreen: React.FC = () => {
   const sendSMS = async (friend: LocalPendingFriend, shouldNavigate: boolean = true) => {
     console.log('Attempting to send SMS to:', friend.phoneNumber);
 
-    const message = `Hi ${friend.name}! I've added you to CoinBreakr, a great app for splitting expenses with friends. Download it to easily manage shared costs: https://coinbreakr.app`;
+    const message = `Hi ${friend.name}! I've added you to Splitlyr, a great app for splitting expenses with friends. Download it to easily manage shared costs: https://splitlyr.app`;
 
     // Different URL formats for different platforms
     let url: string;
@@ -267,45 +267,7 @@ const ReviewFriendsScreen: React.FC = () => {
     );
   };
 
-  const renderFriend = (friend: LocalPendingFriend) => {
-    return (
-      <View key={friend.id} style={styles.friendItem}>
-        <View style={styles.friendAvatar}>
-          {friend.profileImage ? (
-            <Image source={{ uri: friend.profileImage }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="person" size={24} color={colors.text.tertiary} />
-          )}
-        </View>
 
-        <View style={styles.friendInfo}>
-          <Text style={styles.friendName}>{friend.name || 'No name'}</Text>
-          <Text style={styles.friendDetail}>
-            {friend.email || friend.phoneNumber || 'No contact info'}
-          </Text>
-          <Text style={styles.friendType}>
-            {friend.type === 'appUser' ? 'CoinBreakr User' :
-              friend.type === 'contact' ? 'From Contacts' : 'Manual Entry'}
-          </Text>
-        </View>
-
-        <View style={styles.friendActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => editFriend(friend)}
-          >
-            <Ionicons name="pencil" size={18} color={colors.primary[600]} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => removeFriend(friend.id)}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
 
   return (
     <View style={styles.container}>
@@ -320,24 +282,68 @@ const ReviewFriendsScreen: React.FC = () => {
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.summary}>
+          {/* Summary Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Review Friends</Text>
             <Text style={styles.summaryText}>
               {pendingFriends.length} friend{pendingFriends.length !== 1 ? 's' : ''} ready to add
             </Text>
-
           </View>
 
+          {/* Friends List Section */}
           {pendingFriends.length > 0 ? (
-            <View style={styles.friendsList}>
-              {pendingFriends.map(renderFriend)}
+            <View style={styles.lastSection}>
+              <Text style={styles.sectionTitle}>Selected Friends</Text>
+              {pendingFriends.map((friend, index) => (
+                <View key={friend.id} style={[
+                  styles.friendItem,
+                  index === pendingFriends.length - 1 && styles.lastFriendItem
+                ]}>
+                  <View style={styles.friendAvatar}>
+                    {friend.profileImage ? (
+                      <Image source={{ uri: friend.profileImage }} style={styles.avatarImage} />
+                    ) : (
+                      <Ionicons name="person" size={24} color={colors.text.tertiary} />
+                    )}
+                  </View>
+
+                  <View style={styles.friendInfo}>
+                    <Text style={styles.friendName}>{friend.name || 'No name'}</Text>
+                    <Text style={styles.friendDetail}>
+                      {friend.email || friend.phoneNumber || 'No contact info'}
+                    </Text>
+                    <Text style={styles.friendType}>
+                      {friend.type === 'appUser' ? 'Splitlyr User' :
+                        friend.type === 'contact' ? 'From Contacts' : 'Manual Entry'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.friendActions}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => editFriend(friend)}
+                    >
+                      <Ionicons name="pencil" size={18} color={colors.primary[600]} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => removeFriend(friend.id)}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
             </View>
           ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={48} color={colors.text.tertiary} />
-              <Text style={styles.emptyTitle}>No friends selected</Text>
-              <Text style={styles.emptyText}>
-                Go back to add some friends to your list
-              </Text>
+            <View style={styles.lastSection}>
+              <View style={styles.emptyState}>
+                <Ionicons name="people-outline" size={48} color={colors.text.tertiary} />
+                <Text style={styles.emptyTitle}>No friends selected</Text>
+                <Text style={styles.emptyText}>
+                  Go back to add some friends to your list
+                </Text>
+              </View>
             </View>
           )}
         </ScrollView>
@@ -358,7 +364,7 @@ const ReviewFriendsScreen: React.FC = () => {
               disabled={isAdding}
             >
               {isAdding ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={colors.background.primary} />
               ) : (
                 <Text style={styles.addButtonText}>
                   Add Friends ({pendingFriends.length})
@@ -393,7 +399,7 @@ const ReviewFriendsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.body,
+    backgroundColor: colors.background.primary,
   },
   safeArea: {
     flex: 1,
@@ -419,38 +425,39 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  section: {
+    backgroundColor: colors.background.primary,
     paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
   },
-  summary: {
-    backgroundColor: colors.primary[25],
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 16,
-    borderWidth: 1,
-    borderColor: colors.primary[200],
+  lastSection: {
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
   },
-  summaryText: {
+  sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.primary[700],
-    textAlign: 'center',
+    color: colors.text.primary,
+    marginBottom: 16,
   },
-  friendsList: {
-    gap: 12,
+  summaryText: {
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   friendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.primary,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    shadowColor: colors.gray[900],
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 2,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  lastFriendItem: {
+    borderBottomWidth: 0,
   },
   friendAvatar: {
     width: 48,
@@ -500,7 +507,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 40,
   },
   emptyTitle: {
     fontSize: 20,
@@ -554,7 +561,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.background.primary,
   },
 });
 

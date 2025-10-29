@@ -12,7 +12,8 @@ export interface ExpenseUser {
 export interface SplitWith {
     user: ExpenseUser;
     amount: number;
-    isPaid: boolean;
+    settled: boolean;
+    settledAt?: string;
 }
 
 export interface Expense {
@@ -27,6 +28,7 @@ export interface Expense {
     splitWith: SplitWith[];
     isSettled: boolean;
     groupId?: string; // Group ID if this is a group expense
+    group?: { _id: string; name: string }; // Populated group data
 }
 
 export interface ExpensesResponse {
@@ -108,9 +110,12 @@ class ExpensesService {
     }
 
     async getExpenseById(expenseId: string): Promise<Expense> {
-        return this.makeAuthedRequest<Expense>(`/expenses/${expenseId}`, {
+        const response = await this.makeAuthedRequest<any>(`/expenses/${expenseId}`, {
             method: 'GET',
         });
+
+        // Handle different response structures - return the data field if it exists
+        return response.data || response;
     }
 
     async createExpense(expenseData: {
@@ -131,10 +136,13 @@ class ExpensesService {
     }
 
     async updateExpense(expenseId: string, expenseData: Partial<Expense>): Promise<Expense> {
-        return this.makeAuthedRequest<Expense>(`/expenses/${expenseId}`, {
+        const response = await this.makeAuthedRequest<any>(`/expenses/${expenseId}`, {
             method: 'PUT',
             body: JSON.stringify(expenseData),
         });
+
+        // Handle different response structures - return the data field if it exists
+        return response.data || response;
     }
 
     async deleteExpense(expenseId: string): Promise<void> {
