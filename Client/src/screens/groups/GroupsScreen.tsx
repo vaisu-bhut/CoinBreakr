@@ -163,9 +163,6 @@ const GroupsScreen: React.FC = () => {
                     <Text style={styles.memberCount}>
                       {group.members.length} member{group.members.length !== 1 ? 's' : ''}
                     </Text>
-                    {group.hasTransactions && (
-                      <Text style={styles.transactionBadge}>Has expenses</Text>
-                    )}
                   </View>
                   <Ionicons name="chevron-forward" size={20} color={colors.text.tertiary} />
                 </TouchableOpacity>
@@ -177,7 +174,7 @@ const GroupsScreen: React.FC = () => {
                   style={styles.addNewGroupButton}
                   onPress={navigateToCreateGroup}
                 >
-                  <Ionicons name="add-outline" size={18} color="#FFFFFF" />
+                  <Ionicons name="add-outline" size={18} color={colors.background.primary} />
                   <Text style={styles.addNewGroupText}>Create new group</Text>
                 </TouchableOpacity>
               </View>
@@ -234,7 +231,7 @@ const GroupsScreen: React.FC = () => {
                 style={styles.fabOption}
                 onPress={navigateToCreateGroup}
               >
-                <Ionicons name="people" size={20} color="#FFFFFF" />
+                <Ionicons name="people" size={20} color={colors.background.primary} />
               </TouchableOpacity>
             </View>
 
@@ -245,7 +242,7 @@ const GroupsScreen: React.FC = () => {
                   style={styles.fabOption}
                   onPress={handleAddExpense}
                 >
-                  <Ionicons name="add" size={20} color="#FFFFFF" />
+                  <Ionicons name="add" size={20} color={colors.background.primary} />
                 </TouchableOpacity>
               </View>
             )}
@@ -260,7 +257,7 @@ const GroupsScreen: React.FC = () => {
           <Ionicons
             name={showFabOptions ? "close" : "add"}
             size={28}
-            color="#FFFFFF"
+            color={colors.background.primary}
           />
         </TouchableOpacity>
       </View>
@@ -368,7 +365,7 @@ const styles = StyleSheet.create({
   },
   addNewGroupText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: colors.background.primary,
     fontWeight: '600',
     marginLeft: 8,
   },

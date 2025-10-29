@@ -13,6 +13,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
+import { getProfileImageUri } from '../../utils/defaultImage';
 import { Friend, friendsService } from '../../services/friends';
 
 interface RouteParams {
@@ -108,9 +109,9 @@ const FriendDetailsScreen: React.FC = () => {
       {/* Friend Details Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Friend Details</Text>
-        <View style={styles.friendCard}>
+        <View style={styles.friendHeader}>
           <Image
-            source={{ uri: friend.profileImage || 'https://placehold.co/64x64' }}
+            source={{ uri: getProfileImageUri(friend.profileImage, 64) }}
             style={styles.friendAvatar}
           />
           <View style={styles.friendInfo}>
@@ -124,34 +125,33 @@ const FriendDetailsScreen: React.FC = () => {
       </View>
 
       {/* Actions Section */}
-      <View style={styles.section}>
+      <View style={styles.lastSection}>
         <Text style={styles.sectionTitle}>Actions</Text>
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity 
-            style={[styles.actionItem, loading && styles.disabledAction]} 
-            onPress={handleRemoveFriend}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size={20} color="#EF4444" />
-            ) : (
-              <Ionicons name="person-remove" size={20} color="#EF4444" />
-            )}
-            <Text style={[styles.actionText, { color: '#EF4444' }]}>
-              {loading ? 'Removing...' : 'Remove Friend'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionItem} onPress={handleBlockUser}>
-            <Ionicons name="ban" size={20} color="#EF4444" />
-            <Text style={[styles.actionText, { color: '#EF4444' }]}>Block User</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionItem} onPress={handleReportUser}>
-            <Ionicons name="flag" size={20} color="#EF4444" />
-            <Text style={[styles.actionText, { color: '#EF4444' }]}>Report User</Text>
-          </TouchableOpacity>
-        </View>
+        
+        <TouchableOpacity 
+          style={[styles.actionItem, loading && styles.disabledAction]} 
+          onPress={handleRemoveFriend}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size={20} color="#EF4444" />
+          ) : (
+            <Ionicons name="person-remove" size={20} color="#EF4444" />
+          )}
+          <Text style={[styles.actionText, { color: '#EF4444' }]}>
+            {loading ? 'Removing...' : 'Remove Friend'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionItem} onPress={handleBlockUser}>
+          <Ionicons name="ban" size={20} color="#EF4444" />
+          <Text style={[styles.actionText, { color: '#EF4444' }]}>Block User</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={[styles.actionItem, styles.lastActionItem]} onPress={handleReportUser}>
+          <Ionicons name="flag" size={20} color="#EF4444" />
+          <Text style={[styles.actionText, { color: '#EF4444' }]}>Report User</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -160,7 +160,7 @@ const FriendDetailsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.body,
+    backgroundColor: colors.background.primary,
   },
 
   header: {
@@ -188,7 +188,13 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: colors.background.primary,
-    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  lastSection: {
+    backgroundColor: colors.background.primary,
     paddingHorizontal: 24,
     paddingVertical: 20,
   },
@@ -198,13 +204,9 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginBottom: 16,
   },
-  friendCard: {
+  friendHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    marginBottom: 16,
   },
   friendAvatar: {
     width: 64,
@@ -232,17 +234,16 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
 
-  actionsContainer: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
   actionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
+  },
+  lastActionItem: {
+    borderBottomWidth: 0,
   },
   actionText: {
     fontSize: 16,

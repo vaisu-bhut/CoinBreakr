@@ -106,13 +106,13 @@ const FriendExpenseScreen: React.FC = () => {
       if (expense.paidBy._id === userId) {
         // Find how much friend owes
         const friendSplit = expense.splitWith.find(split => split.user._id === friend._id);
-        if (friendSplit && !friendSplit.isPaid) {
+        if (friendSplit && !friendSplit.settled) {
           balance += friendSplit.amount; // Friend owes money (positive)
         }
       } else if (expense.paidBy._id === friend._id) {
         // If friend paid the expense
         const userSplit = expense.splitWith.find(split => split.user._id === userId);
-        if (userSplit && !userSplit.isPaid) {
+        if (userSplit && !userSplit.settled) {
           balance -= userSplit.amount; // User owes money (negative)
         }
       }
@@ -169,10 +169,10 @@ const FriendExpenseScreen: React.FC = () => {
         const friendSplit = expense.splitWith.find(split => split.user._id === friend._id);
 
         // Include expense if either user or friend paid and there are unsettled splits
-        if (expense.paidBy._id === userId && friendSplit && !friendSplit.isPaid) {
+        if (expense.paidBy._id === userId && friendSplit && !friendSplit.settled) {
           return true;
         }
-        if (expense.paidBy._id === friend._id && userSplit && !userSplit.isPaid) {
+        if (expense.paidBy._id === friend._id && userSplit && !userSplit.settled) {
           return true;
         }
 
@@ -253,9 +253,9 @@ const FriendExpenseScreen: React.FC = () => {
     const friendSplit = expense.splitWith.find(split => split.user._id === friend._id);
     const userSplit = expense.splitWith.find(split => split.user._id === userId);
 
-    if (userPaid && friendSplit && !friendSplit.isPaid) {
+    if (userPaid && friendSplit && !friendSplit.settled) {
       return 'friend_owes';
-    } else if (!userPaid && userSplit && !userSplit.isPaid) {
+    } else if (!userPaid && userSplit && !userSplit.settled) {
       return 'user_owes';
     }
 
@@ -301,7 +301,7 @@ const FriendExpenseScreen: React.FC = () => {
         <Text style={styles.balanceLabel}>Overall Balance</Text>
         <Text style={[
           styles.balanceAmount,
-          { color: totalBalance === 0 ? colors.text.tertiary : totalBalance > 0 ? '#10B981' : '#EF4444' }
+          { color: totalBalance === 0 ? colors.text.tertiary : totalBalance > 0 ? colors.success : colors.error }
         ]}>
           {totalBalance === 0
             ? 'All settled up!'
@@ -344,7 +344,7 @@ const FriendExpenseScreen: React.FC = () => {
         >
           {expenses.length > 0 ? (
             <>
-              {expenses.map((expense) => {
+              {expenses.map((expense, index) => {
                 const status = getExpenseStatus(expense);
                 const userPaid = expense.paidBy._id === userId;
                 const splitAmount = expense.splitWith.find(split =>
@@ -354,7 +354,10 @@ const FriendExpenseScreen: React.FC = () => {
                 return (
                   <TouchableOpacity
                     key={expense._id}
-                    style={styles.expenseItem}
+                    style={[
+                      styles.expenseItem,
+                      index === expenses.length - 1 && styles.lastExpenseItem
+                    ]}
                     onPress={() => handleExpensePress(expense)}
                   >
                     <View style={styles.expenseLeft}>
@@ -366,7 +369,14 @@ const FriendExpenseScreen: React.FC = () => {
                         />
                       </View>
                       <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseTitle}>{expense.title}</Text>
+                        <View style={styles.expenseTitleContainer}>
+                          <Text style={styles.expenseTitle}>{expense.title}</Text>
+                          {expense.group && (
+                            <View style={styles.groupBadge}>
+                              <Ionicons name="people" size={14} color={colors.background.primary} />
+                            </View>
+                          )}
+                        </View>
                         <Text style={styles.expenseDate}>
                           {formatDate(expense.date)} • Paid by {expense.paidBy.name}
                         </Text>
@@ -381,7 +391,7 @@ const FriendExpenseScreen: React.FC = () => {
                         <Text style={[
                           styles.expenseStatus,
                           {
-                            color: status === 'friend_owes' ? '#10B981' : '#EF4444'
+                            color: status === 'friend_owes' ? colors.success : colors.error
                           }
                         ]}>
                           {status === 'friend_owes'
@@ -425,7 +435,7 @@ const FriendExpenseScreen: React.FC = () => {
         }}
       >
         <View style={styles.fabContent}>
-          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Ionicons name="add" size={20} color={colors.background.primary} />
           <Text style={styles.fabText}>Add Expense</Text>
         </View>
       </TouchableOpacity>
@@ -512,7 +522,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: colors.background.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -533,6 +543,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border.light,
   },
+  lastExpenseItem: {
+    borderBottomWidth: 0,
+  },
   expenseLeft: {
     flex: 1,
     flexDirection: 'row',
@@ -550,11 +563,25 @@ const styles = StyleSheet.create({
   expenseInfo: {
     flex: 1,
   },
+  expenseTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   expenseTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text.primary,
-    marginBottom: 4,
+    flex: 1,
+  },
+  groupBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[600],
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   expenseDate: {
     fontSize: 12,
@@ -622,7 +649,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: colors.gray[900],
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -632,7 +659,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fabText: {
-    color: '#FFFFFF',
+    color: colors.background.primary,
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 8,

@@ -1,11 +1,11 @@
 export const API_CONFIG = {
-    DOMAIN_URL: 'http://api.beleno.clestiq.com',
-    FALLBACK_IP: '35.188.9.86', 
-    PORT: 3000,
-    API_VERSION: 'v1',
-    TIMEOUT: 10000,
-    RETRY_ATTEMPTS: 3,
-    HEALTH_CHECK_TIMEOUT: 5000,
+    DOMAIN_URL: process.env.EXPO_PUBLIC_API_DOMAIN_URL || 'http://localhost',
+    FALLBACK_IP: process.env.EXPO_PUBLIC_API_FALLBACK_IP || '127.0.0.1',
+    PORT: parseInt(process.env.EXPO_PUBLIC_API_PORT || '3000', 10),
+    API_VERSION: process.env.EXPO_PUBLIC_API_VERSION || 'v1',
+    TIMEOUT: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '10000', 10),
+    RETRY_ATTEMPTS: parseInt(process.env.EXPO_PUBLIC_API_RETRY_ATTEMPTS || '3', 10),
+    HEALTH_CHECK_TIMEOUT: parseInt(process.env.EXPO_PUBLIC_HEALTH_CHECK_TIMEOUT || '5000', 10),
 };
 
 let currentApiUrl: string | null = null;

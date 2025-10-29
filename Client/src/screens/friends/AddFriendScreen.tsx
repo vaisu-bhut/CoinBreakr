@@ -246,42 +246,7 @@ const AddFriendScreen: React.FC = () => {
     navigation.navigate('ReviewFriends', { pendingFriends });
   };
 
-  const renderContact = (contact: Contact) => (
-    <TouchableOpacity
-      key={contact.id}
-      style={styles.listItem}
-      onPress={() => handleContactSelect(contact)}
-    >
-      <View style={styles.avatar}>
-        <Ionicons name="person" size={20} color={colors.text.tertiary} />
-      </View>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{contact.name}</Text>
-        <Text style={styles.itemDetail}>
-          {contact.phoneNumbers?.[0] || contact.emails?.[0] || 'No contact info'}
-        </Text>
-      </View>
-      <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} />
-    </TouchableOpacity>
-  );
 
-  const renderAppUser = (user: AppUser) => (
-    <TouchableOpacity
-      key={user._id}
-      style={styles.listItem}
-      onPress={() => handleAppUserSelect(user)}
-    >
-      <Image
-        source={{ uri: user.profileImage || 'https://placehold.co/40x40' }}
-        style={styles.userAvatar}
-      />
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{user.name}</Text>
-        <Text style={styles.itemDetail}>{user.email}</Text>
-      </View>
-      <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} />
-    </TouchableOpacity>
-  );
 
 
 
@@ -301,8 +266,9 @@ const AddFriendScreen: React.FC = () => {
       {/* Content */}
       <View style={styles.content}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          {/* Search Bar with Tags */}
-          <View style={styles.searchContainer}>
+          {/* Search Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Search Friends</Text>
             <View style={styles.searchInputContainer}>
               {/* Selected Friends Tags */}
               <View style={styles.tagsContainer}>
@@ -326,41 +292,82 @@ const AddFriendScreen: React.FC = () => {
                 />
               </View>
             </View>
-          </View>
 
-          {/* Add Someone New Button */}
-          <TouchableOpacity
-            style={styles.addNewButton}
-            onPress={() => setShowAddPersonModal(true)}
-          >
-            <Ionicons name="person-add-outline" size={20} color={colors.primary[600]} />
-            <Text style={styles.addNewText}>{getAddButtonText()}</Text>
-          </TouchableOpacity>
+            {/* Add Someone New Button */}
+            <TouchableOpacity
+              style={styles.addNewButton}
+              onPress={() => setShowAddPersonModal(true)}
+            >
+              <Ionicons name="person-add-outline" size={20} color={colors.primary[600]} />
+              <Text style={styles.addNewText}>{getAddButtonText()}</Text>
+            </TouchableOpacity>
+          </View>
 
 
 
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary[600]} />
-              <Text style={styles.loadingText}>Loading contacts...</Text>
+            <View style={styles.lastSection}>
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary[600]} />
+                <Text style={styles.loadingText}>Loading contacts...</Text>
+              </View>
             </View>
           ) : (
             <>
               {/* App Users Results */}
               {filteredAppUsers.length > 0 && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>CoinBreakr Users</Text>
-                  {filteredAppUsers.map(renderAppUser)}
+                  <Text style={styles.sectionTitle}>Splitlyr Users</Text>
+                  {filteredAppUsers.map((user, index) => (
+                    <TouchableOpacity
+                      key={user._id}
+                      style={[
+                        styles.listItem,
+                        index === filteredAppUsers.length - 1 && styles.lastListItem
+                      ]}
+                      onPress={() => handleAppUserSelect(user)}
+                    >
+                      <Image
+                        source={{ uri: user.profileImage || 'https://placehold.co/40x40' }}
+                        style={styles.userAvatar}
+                      />
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName}>{user.name}</Text>
+                        <Text style={styles.itemDetail}>{user.email}</Text>
+                      </View>
+                      <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} />
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
 
               {/* Contacts */}
-              <View style={styles.section}>
+              <View style={filteredAppUsers.length > 0 ? styles.lastSection : styles.lastSection}>
                 <Text style={styles.sectionTitle}>
                   {searchQuery ? 'Matching Contacts' : 'Your Contacts'}
                 </Text>
                 {filteredContacts.length > 0 ? (
-                  filteredContacts.map(renderContact)
+                  filteredContacts.map((contact, index) => (
+                    <TouchableOpacity
+                      key={contact.id}
+                      style={[
+                        styles.listItem,
+                        index === filteredContacts.length - 1 && styles.lastListItem
+                      ]}
+                      onPress={() => handleContactSelect(contact)}
+                    >
+                      <View style={styles.avatar}>
+                        <Ionicons name="person" size={20} color={colors.text.tertiary} />
+                      </View>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName}>{contact.name}</Text>
+                        <Text style={styles.itemDetail}>
+                          {contact.phoneNumbers?.[0] || contact.emails?.[0] || 'No contact info'}
+                        </Text>
+                      </View>
+                      <Ionicons name="add-circle-outline" size={24} color={colors.primary[600]} />
+                    </TouchableOpacity>
+                  ))
                 ) : (
                   <Text style={styles.emptyText}>
                     {searchQuery ? 'No matching contacts found' : 'No contacts available'}
@@ -397,7 +404,7 @@ const AddFriendScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.body,
+    backgroundColor: colors.background.primary,
   },
   header: {
     backgroundColor: colors.background.body,
@@ -420,14 +427,27 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     backgroundColor: colors.background.primary,
-    paddingHorizontal: 24,
   },
   scrollContent: {
-    paddingTop: 24,
     paddingBottom: 100,
   },
-  searchContainer: {
-    marginBottom: 20,
+  section: {
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  lastSection: {
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 16,
   },
   searchInputContainer: {
     backgroundColor: colors.background.primary,
@@ -435,6 +455,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.medium,
     minHeight: 48,
+    marginBottom: 16,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -477,7 +498,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.primary[200],
   },
@@ -487,24 +507,16 @@ const styles = StyleSheet.create({
     color: colors.primary[600],
     marginLeft: 8,
   },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 12,
-  },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.primary,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.border.light,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.light,
+  },
+  lastListItem: {
+    borderBottomWidth: 0,
   },
 
   avatar: {
