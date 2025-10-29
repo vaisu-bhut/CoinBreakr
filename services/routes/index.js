@@ -7,12 +7,14 @@ const healthRoutes = require('./health');
 const userRoutes = require('./users');
 const expenseRoutes = require('./expenses');
 const groupRoutes = require('./groups');
+const contactRoutes = require('./contact');
 
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/groups', groupRoutes);
+router.use('/contact', contactRoutes);
 router.use('/healthz', healthRoutes);
 
 module.exports = router;
