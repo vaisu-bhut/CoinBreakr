@@ -1,6 +1,6 @@
 # Reference existing DNS Zone for splitlyr.clestiq.com
 data "google_dns_managed_zone" "splitlyr_zone" {
-  name = var.dns_zone_name  
+  name = var.dns_zone_name
 }
 
 # A record for API subdomain (main environment)
