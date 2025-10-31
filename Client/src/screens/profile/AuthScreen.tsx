@@ -71,7 +71,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
       // Navigate to Main tab navigator after successful auth
       navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (error: any) {
-      console.error('Auth error:', error);
+      // Only log in development
+      if (__DEV__) {
+        console.error('Auth error:', error);
+      }
       // Normalize ApiErrorResponse shape coming from authService
       const apiError: any = error && error.success === false ? error : null;
 
