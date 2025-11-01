@@ -1,11 +1,11 @@
 export const API_CONFIG = {
-    DOMAIN_URL: process.env.EXPO_PUBLIC_API_DOMAIN_URL || 'http://localhost',
-    FALLBACK_IP: process.env.EXPO_PUBLIC_API_FALLBACK_IP || '127.0.0.1',
-    PORT: parseInt(process.env.EXPO_PUBLIC_API_PORT || '3000', 10),
-    API_VERSION: process.env.EXPO_PUBLIC_API_VERSION || 'v1',
-    TIMEOUT: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '10000', 10),
-    RETRY_ATTEMPTS: parseInt(process.env.EXPO_PUBLIC_API_RETRY_ATTEMPTS || '3', 10),
-    HEALTH_CHECK_TIMEOUT: parseInt(process.env.EXPO_PUBLIC_HEALTH_CHECK_TIMEOUT || '5000', 10),
+    DOMAIN_URL: process.env.EXPO_PUBLIC_API_DOMAIN_URL,
+    FALLBACK_IP: process.env.EXPO_PUBLIC_API_FALLBACK_IP,
+    PORT: parseInt(process.env.EXPO_PUBLIC_API_PORT),
+    API_VERSION: process.env.EXPO_PUBLIC_API_VERSION,
+    TIMEOUT: parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT, 10),
+    RETRY_ATTEMPTS: parseInt(process.env.EXPO_PUBLIC_API_RETRY_ATTEMPTS, 10),
+    HEALTH_CHECK_TIMEOUT: parseInt(process.env.EXPO_PUBLIC_HEALTH_CHECK_TIMEOUT, 10),
 };
 
 let currentApiUrl: string | null = null;
@@ -14,18 +14,29 @@ const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 const checkDomainHealth = async (): Promise<boolean> => {
     try {
+        // For HTTPS domains, don't add port if it's 443 (standard HTTPS port)
+        const isHttps = API_CONFIG.DOMAIN_URL.startsWith('https://');
+        const isStandardPort = (isHttps && API_CONFIG.PORT === 443) || (!isHttps && API_CONFIG.PORT === 80);
+
+        const healthUrl = isStandardPort
+            ? `${API_CONFIG.DOMAIN_URL}/${API_CONFIG.API_VERSION}/healthz`
+            : `${API_CONFIG.DOMAIN_URL}:${API_CONFIG.PORT}/${API_CONFIG.API_VERSION}/healthz`;
+
+        console.log('Checking health at:', healthUrl);
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.HEALTH_CHECK_TIMEOUT);
-        
-        const response = await fetch(`${API_CONFIG.DOMAIN_URL}:${API_CONFIG.PORT}/${API_CONFIG.API_VERSION}/healthz`, {
+
+        const response = await fetch(healthUrl, {
             method: 'GET',
             signal: controller.signal,
             headers: {
                 'Content-Type': 'application/json',
             },
         });
-        
+
         clearTimeout(timeoutId);
+        console.log('Health check response status:', response.status);
         return response.status === 200;
     } catch (error) {
         console.warn('Domain health check failed:', error);
@@ -35,24 +46,30 @@ const checkDomainHealth = async (): Promise<boolean> => {
 
 export const getApiUrl = async (): Promise<string> => {
     const now = Date.now();
-    
+
     // Use cached URL if health check was recent
     if (currentApiUrl && (now - lastHealthCheck) < HEALTH_CHECK_INTERVAL) {
         return currentApiUrl;
     }
-    
+
     // Check domain health
     const isDomainHealthy = await checkDomainHealth();
     lastHealthCheck = now;
-    
+
     if (isDomainHealthy) {
-        currentApiUrl = `${API_CONFIG.DOMAIN_URL}:${API_CONFIG.PORT}/${API_CONFIG.API_VERSION}`;
+        // For HTTPS domains, don't add port if it's 443 (standard HTTPS port)
+        const isHttps = API_CONFIG.DOMAIN_URL.startsWith('https://');
+        const isStandardPort = (isHttps && API_CONFIG.PORT === 443) || (!isHttps && API_CONFIG.PORT === 80);
+
+        currentApiUrl = isStandardPort
+            ? `${API_CONFIG.DOMAIN_URL}/${API_CONFIG.API_VERSION}`
+            : `${API_CONFIG.DOMAIN_URL}:${API_CONFIG.PORT}/${API_CONFIG.API_VERSION}`;
         console.log('Using domain URL:', currentApiUrl);
     } else {
         currentApiUrl = `http://${API_CONFIG.FALLBACK_IP}:${API_CONFIG.PORT}/${API_CONFIG.API_VERSION}`;
         console.log('Using fallback IP:', currentApiUrl);
     }
-    
+
     return currentApiUrl;
 };
 
@@ -62,7 +79,12 @@ export const getApiUrlSync = (): string => {
         return currentApiUrl;
     }
     // Default to domain on first load
-    return `${API_CONFIG.DOMAIN_URL}/${API_CONFIG.API_VERSION}`;
+    const isHttps = API_CONFIG.DOMAIN_URL.startsWith('https://');
+    const isStandardPort = (isHttps && API_CONFIG.PORT === 443) || (!isHttps && API_CONFIG.PORT === 80);
+
+    return isStandardPort
+        ? `${API_CONFIG.DOMAIN_URL}/${API_CONFIG.API_VERSION}`
+        : `${API_CONFIG.DOMAIN_URL}:${API_CONFIG.PORT}/${API_CONFIG.API_VERSION}`;
 };
 
 // Initialize API URL on app start
