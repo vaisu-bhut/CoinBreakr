@@ -48,7 +48,7 @@ resource "google_compute_health_check" "coinbreakr_health_check" {
 
   http_health_check {
     port         = 3000
-    request_path = "/v1/healthz"  # Adjust this to your app's health endpoint
+    request_path = "/v1/healthz" # Adjust this to your app's health endpoint
   }
 }
 
@@ -117,7 +117,7 @@ resource "google_compute_backend_service" "coinbreakr_backend" {
 # Add a delay to ensure health check is ready
 resource "time_sleep" "wait_for_health_check" {
   depends_on = [google_compute_health_check.coinbreakr_health_check]
-  
+
   create_duration = "30s"
 }
 
