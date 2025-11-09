@@ -10,10 +10,10 @@ permissions:
 
 env:
   GCP_PROJECT_ID: coinbreakr
-  GCP_REGION: us-central1
-  GCP_ZONE: us-central1-a
+  GCP_REGION: us-east1
+  GCP_ZONE: us-east1-b
   GKE_CLUSTER: coinbreakr-testing-cluster
-  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
+  ARTIFACT_REGISTRY: us-east1-docker.pkg.dev
   REPOSITORY: coinbreakr-testing
   IMAGE_NAME: services
 
