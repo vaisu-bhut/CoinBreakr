@@ -22,7 +22,7 @@ jobs:
       - name: 🔍 Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: services/Dockerfile
+          dockerfile: services/docker-compose.yml
           failure-threshold: warning
 
       - name: 🏗️ Build Docker Image (Test)
